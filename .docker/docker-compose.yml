@@ -1,0 +1,98 @@
+# ============================================================
+# ktestify — local test infrastructure
+#
+# Starts:
+#   - Kafka broker  (KRaft mode, no Zookeeper) -> localhost:9092
+#   - Schema Registry                           -> localhost:8081
+#   - Topic initializer (creates dummy topics and registers schemas)
+#
+# Usage:
+#   cd docker/
+#   docker compose up -d          # start everything
+#   docker compose down -v        # stop + wipe volumes
+#
+# Dummy topics created:
+#   ktestify.raw-orders            (INPUT  - plain String)
+#   ktestify.raw-orders-processed  (OUTPUT - plain String)
+#   ktestify.avro-orders           (INPUT  - Avro)
+#   ktestify.avro-orders-processed (OUTPUT - Avro)
+# ============================================================
+
+services:
+
+  # ----------------------------------------------------------
+  # Kafka broker - KRaft mode (no Zookeeper)
+  # ----------------------------------------------------------
+  broker:
+    image: confluentinc/cp-kafka:7.8.0
+    hostname: broker
+    container_name: ktestify-broker
+    ports:
+      - "9092:9092"
+      - "9101:9101"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@broker:29093"
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      KAFKA_LISTENERS: PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  # ----------------------------------------------------------
+  # Schema Registry
+  # ----------------------------------------------------------
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.8.0
+    hostname: schema-registry
+    container_name: ktestify-schema-registry
+    depends_on:
+      broker:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: broker:29092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/subjects"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # ----------------------------------------------------------
+  # Topic + schema initializer (runs once, then exits)
+  # ----------------------------------------------------------
+  init:
+    image: confluentinc/cp-kafka:7.8.0
+    container_name: ktestify-init
+    depends_on:
+      broker:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+    volumes:
+      - ./init-topics.sh:/init-topics.sh:ro
+      - ./schemas:/schemas:ro
+    entrypoint: ["/bin/bash", "/init-topics.sh"]
+    environment:
+      BOOTSTRAP_SERVERS: broker:29092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+

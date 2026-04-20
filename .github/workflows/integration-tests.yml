@@ -1,18 +1,19 @@
 # ============================================================
-# Integration Tests — Docker Compose + Cucumber @integration
+# ============================================================
+# Integration Tests — Testcontainers + Cucumber @integration
 #
 # Triggered on:
 #   - Manual dispatch (workflow_dispatch)   → any branch, optional tag filter
 #   - Push / PR to main (paths that affect integration behaviour)
 #
 # What it does:
-#   1. Starts the ktestify docker-compose stack
-#      (Kafka KRaft + Schema Registry + topic initialiser)
-#   2. Builds ktestify-core (local install — no Maven Central needed)
-#   3. Builds the ktestify-cucumber fat-JAR
-#   4. Runs all @integration Cucumber scenarios via the fat-JAR
-#   5. Uploads the Cucumber JSON report as a run artefact
-#   6. Posts a sticky summary to the PR (if triggered by a PR)
+#   1. Builds ktestify-core (local install — no Maven Central needed)
+#   2. Runs `mvn verify -Pintegration-tests` on ktestify-cucumber
+#      → CucumberIntegrationIT starts Kafka + Schema Registry via
+#        Testcontainers, then runs all @integration Cucumber scenarios
+#        in-process via the Cucumber CLI
+#   3. Uploads the Cucumber JSON report as a run artefact
+#   4. Posts a sticky summary to the PR (if triggered by a PR)
 # ============================================================
 name: Integration Tests
 
@@ -30,7 +31,6 @@ on:
       - "pom.xml"
       - "../ktestify-core/src/**"
       - "../ktestify-core/pom.xml"
-      - "../docker/**"
   pull_request:
     branches: [ main ]
     paths:
@@ -38,7 +38,6 @@ on:
       - "pom.xml"
       - "../ktestify-core/src/**"
       - "../ktestify-core/pom.xml"
-      - "../docker/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -69,148 +68,59 @@ jobs:
     steps:
       # ── 1. Checkout ──────────────────────────────────────────
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       # ── 2. Java ──────────────────────────────────────────────
       - name: Set up Java ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
           cache: maven
 
-      # ── 3. Start docker-compose stack ────────────────────────
-      - name: 🐳 Start Kafka + Schema Registry
-        working-directory: docker
-        run: |
-          docker compose up -d
-          echo "Waiting for services to become healthy…"
-
-      - name: ⏳ Wait for Kafka to be healthy
-        run: |
-          for i in $(seq 1 30); do
-            STATUS=$(docker inspect --format='{{.State.Health.Status}}' ktestify-broker 2>/dev/null || echo "missing")
-            echo "  broker health: $STATUS (attempt $i/30)"
-            if [ "$STATUS" = "healthy" ]; then
-              echo "✅ Kafka is healthy."
-              break
-            fi
-            if [ $i -eq 30 ]; then
-              echo "❌ Kafka did not become healthy in time."
-              docker compose -f docker/docker-compose.yml logs broker
-              exit 1
-            fi
-            sleep 5
-          done
-
-      - name: ⏳ Wait for Schema Registry to be healthy
-        run: |
-          for i in $(seq 1 20); do
-            STATUS=$(docker inspect --format='{{.State.Health.Status}}' ktestify-schema-registry 2>/dev/null || echo "missing")
-            echo "  schema-registry health: $STATUS (attempt $i/20)"
-            if [ "$STATUS" = "healthy" ]; then
-              echo "✅ Schema Registry is healthy."
-              break
-            fi
-            if [ $i -eq 20 ]; then
-              echo "❌ Schema Registry did not become healthy in time."
-              docker compose -f docker/docker-compose.yml logs schema-registry
-              exit 1
-            fi
-            sleep 5
-          done
-
-      - name: ⏳ Wait for topic initialiser to complete
-        run: |
-          for i in $(seq 1 20); do
-            STATUS=$(docker inspect --format='{{.State.Status}}' ktestify-init 2>/dev/null || echo "missing")
-            echo "  init container status: $STATUS (attempt $i/20)"
-            if [ "$STATUS" = "exited" ]; then
-              EXIT_CODE=$(docker inspect --format='{{.State.ExitCode}}' ktestify-init)
-              if [ "$EXIT_CODE" = "0" ]; then
-                echo "✅ Topics and schemas initialised successfully."
-                break
-              else
-                echo "❌ Init container exited with code $EXIT_CODE."
-                docker logs ktestify-init
-                exit 1
-              fi
-            fi
-            if [ $i -eq 20 ]; then
-              echo "❌ Init container did not finish in time."
-              docker logs ktestify-init
-              exit 1
-            fi
-            sleep 5
-          done
-
-      # ── 4. Build ktestify-core (local Maven install) ─────────
+      # ── 3. Build ktestify-core (local Maven install) ─────────
       - name: 🔨 Build & install ktestify-core
-        working-directory: ../ktestify-core
+        working-directory: ktestify-core
         run: |
           mvn install \
             --no-transfer-progress \
             -DskipTests \
             -Dspotless.check.skip=true
 
-      # ── 5. Build ktestify-cucumber fat-JAR ───────────────────
-      - name: 🔨 Package ktestify-cucumber
+      # ── 4. Run integration tests via Testcontainers ───────────
+      #
+      # CucumberIntegrationIT (picked up by maven-failsafe-plugin) will:
+      #   • Start Kafka (apache/kafka:4.2.0) via Testcontainers
+      #   • Start Schema Registry (confluentinc/cp-schema-registry:7.9.0) via Testcontainers
+      #   • Wire dynamic host/port values into KtestifyConfig
+      #   • Execute all Cucumber scenarios matching the supplied tag filter
+      # ─────────────────────────────────────────────────────────
+      - name: 🧪 Run integration tests (Testcontainers + Cucumber)
+        working-directory: ktestify-cucumber
         run: |
-          mvn package \
+          mvn verify \
             --no-transfer-progress \
-            -DskipTests \
-            -Dspotless.check.skip=true
+            -Pintegration-tests \
+            -Dspotless.check.skip=true \
+            -Dcucumber.it.tags="${{ env.CUCUMBER_TAGS }}"
 
-      # ── 6. Run integration tests ──────────────────────────────
-      - name: 🧪 Run Cucumber integration tests
-        run: |
-          java -jar target/ktestify-cucumber.jar \
-            --tags "${{ env.CUCUMBER_TAGS }}" \
-            --plugin "json:target/cucumber-reports/cucumber.json" \
-            --plugin "pretty" \
-            src/test/resources/features
-        env:
-          KTESTIFY_KAFKA_BOOTSTRAP_SERVERS: "localhost:9092"
-          KTESTIFY_SCHEMA_REGISTRY_URL: "http://localhost:8081"
-          KTESTIFY_TOPIC_NAMESPACE: "ktestify"
-          KTESTIFY_ASSETS_DIR: "${{ github.workspace }}/src/test/resources/data"
-
-      # ── 7. Upload Cucumber JSON report ────────────────────────
+      # ── 5. Upload Cucumber JSON report ────────────────────────
       - name: 📦 Upload Cucumber report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: cucumber-report-${{ github.run_id }}
-          path: target/cucumber-reports/cucumber.json
+          path: ktestify-cucumber/target/cucumber-reports/cucumber.json
           retention-days: 30
 
-      # ── 8. Upload docker-compose logs on failure ──────────────
-      - name: 📋 Upload docker-compose logs (on failure)
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: docker-logs-${{ github.run_id }}
-          path: /tmp/docker-logs/
-          retention-days: 7
-        continue-on-error: true
-
-      - name: Collect docker-compose logs
-        if: failure()
-        working-directory: docker
-        run: |
-          mkdir -p /tmp/docker-logs
-          docker compose logs broker         > /tmp/docker-logs/broker.log         2>&1 || true
-          docker compose logs schema-registry > /tmp/docker-logs/schema-registry.log 2>&1 || true
-          docker compose logs init           > /tmp/docker-logs/init.log           2>&1 || true
-
-      # ── 9. Parse Cucumber JSON → Step Summary + PR comment ────
+      # ── 6. Parse Cucumber JSON → Step Summary + PR comment ────
       - name: 📊 Generate integration test report
         if: always()
         run: |
           python3 << 'PYEOF'
           import json, os, sys
 
-          report_path = 'target/cucumber-reports/cucumber.json'
+          report_path = 'ktestify-cucumber/target/cucumber-reports/cucumber.json'
           if not os.path.exists(report_path):
               print('Cucumber report not found — skipping summary.')
               sys.exit(0)
@@ -272,7 +182,7 @@ jobs:
 
       - name: 💬 Post integration report to PR
         if: ${{ always() && github.event_name == 'pull_request' }}
-        uses: actions/github-script@v9
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
@@ -312,9 +222,4 @@ jobs:
               console.log('✅ Created new integration report comment');
             }
 
-      # ── 10. Tear down docker-compose ─────────────────────────
-      - name: 🐳 Tear down docker-compose
-        if: always()
-        working-directory: docker
-        run: docker compose down -v
 

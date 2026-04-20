@@ -644,6 +644,21 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <version>${maven.surefire.plugin.version}</version>
+                        <configuration>
+                            <includes>
+                                <include>**/*IT.java</include>
+                            </includes>
+                            <argLine>
+                                -Xmx2048m
+                                -XX:+EnableDynamicAgentLoading
+                            </argLine>
+                            <systemPropertyVariables>
+                                <!-- Cucumber tag filter: override with -Dcucumber.it.tags="@smoke" -->
+                                <cucumber.it.tags>${cucumber.it.tags}</cucumber.it.tags>
+                                <!-- Assets directory resolved to the absolute project path -->
+                                <ktestify.assets.dir>${project.basedir}/src/test/resources/data</ktestify.assets.dir>
+                            </systemPropertyVariables>
+                        </configuration>
                         <executions>
                             <execution>
                                 <goals>
@@ -655,6 +670,10 @@
                     </plugin>
                 </plugins>
             </build>
+            <properties>
+                <!-- Default tag filter when -Dcucumber.it.tags is not supplied -->
+                <cucumber.it.tags>@integration</cucumber.it.tags>
+            </properties>
         </profile>
     </profiles>
 
