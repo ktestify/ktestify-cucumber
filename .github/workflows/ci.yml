@@ -1,0 +1,315 @@
+# ============================================================
+# CI — Continuous Integration
+#
+# Triggered on every push to any branch and on every PR
+# targeting `main`.  Two independent jobs run in parallel:
+#
+#   lint   → Spotless code-style check
+#   build  → Compile + tests (unit + Testcontainers) + JaCoCo
+#
+# A synthetic `ci-success` job aggregates the two results so
+# branch-protection rules only need to track one required check.
+# ============================================================
+name: CI
+
+on:
+  push:
+    branches: [ "**" ]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/pull_request_template.md"
+      - ".github/SECURITY.md"
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/pull_request_template.md"
+      - ".github/SECURITY.md"
+
+# Cancel in-progress runs for the same branch/PR (keep only the latest)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  JAVA_VERSION: "25"
+  MAVEN_OPTS: >-
+    -Xmx2048m
+    -XX:+EnableDynamicAgentLoading
+    -Dmaven.repo.local=${{ github.workspace }}/.m2/repository
+
+# Minimal default permissions — each job declares only what it needs
+permissions:
+  contents: read
+
+# ──────────────────────────────────────────────────────────────
+jobs:
+
+  # ── 1. Code Style ─────────────────────────────────────────
+  lint:
+    name: 🎨 Code Style (Spotless)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read          # checkout only
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6   # v6: credentials stored in $RUNNER_TEMP, not .git/config
+
+      - name: Set up Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Spotless — check formatting
+        run: mvn spotless:check --no-transfer-progress
+
+  # ── 2. Build, Test & Coverage ────────────────────────────
+  build:
+    name: 🔨 Build, Test & Coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read          # checkout only
+      pull-requests: write    # post / update the sticky CI report comment
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6   # v6: credentials stored in $RUNNER_TEMP, not .git/config
+
+      - name: Set up Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      # Testcontainers: disable Ryuk to avoid permission issues on GH runners
+      - name: Build, run tests & enforce coverage (≥ 70 %)
+        run: mvn verify --no-transfer-progress -Dspotless.check.skip=true
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: "true"
+
+      # Always upload the HTML + XML JaCoCo report so it is available
+      # for SonarCloud and for manual inspection
+      - name: Upload JaCoCo HTML report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: jacoco-html-${{ github.run_id }}
+          path: target/site/jacoco/
+          retention-days: 14
+
+      # Upload the binary .exec — kept for future tooling integration
+      - name: Upload JaCoCo exec
+        if: >
+          github.ref == 'refs/heads/main' ||
+          github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: jacoco-exec-${{ github.run_id }}
+          path: target/jacoco.exec
+          retention-days: 7
+
+      # Upload Surefire XML reports so GitHub can parse test results
+      - name: Upload Surefire reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: surefire-reports-${{ github.run_id }}
+          path: target/surefire-reports/
+          retention-days: 7
+
+      # ── Generate CI report ────────────────────────────────
+      # Parses Surefire XML + JaCoCo XML and produces a single
+      # Markdown report written to:
+      #   • $GITHUB_STEP_SUMMARY  → visible in the Actions run page
+      #   • /tmp/ci-report.md     → picked up by the PR comment step
+      - name: 📊 Generate CI report (tests + coverage)
+        if: always()
+        run: |
+          python3 << 'PYEOF'
+          import xml.etree.ElementTree as ET
+          import glob, os
+
+          # ── Surefire results ─────────────────────────────
+          # WHY we count <testcase> elements instead of reading the
+          # root <testsuite tests="N"> attribute:
+          #
+          # JUnit 5 with @Nested classes causes surefire to write
+          # *nested* <testsuite> elements inside the root one.
+          # The root's `tests` attribute then reflects only direct
+          # (non-nested) test methods, producing a count far below
+          # what Maven itself reports (e.g. 68 vs 613).
+          #
+          # Counting every <testcase> descendant recursively gives
+          # the true total regardless of nesting depth.
+          total = failures = errors = skipped = 0
+          failed_list = []
+
+          for path in sorted(glob.glob('target/surefire-reports/TEST-*.xml')):
+              try:
+                  root = ET.parse(path).getroot()
+                  suite_name = root.get('name', path)
+
+                  for tc in root.findall('.//testcase'):
+                      total += 1
+                      if tc.find('failure') is not None:
+                          failures += 1
+                          failed_list.append(f"{tc.get('classname', suite_name)}#{tc.get('name', '?')}")
+                      elif tc.find('error') is not None:
+                          errors += 1
+                          failed_list.append(f"{tc.get('classname', suite_name)}#{tc.get('name', '?')}")
+                      elif tc.find('skipped') is not None:
+                          skipped += 1
+              except Exception as e:
+                  print(f'Warning: could not parse {path}: {e}')
+
+          passed   = total - failures - errors - skipped
+          t_status = '✅' if failures + errors == 0 else '❌'
+
+          # ── JaCoCo coverage ──────────────────────────────
+          line_pct = branch_pct = method_pct = 0.0
+          line_cov = line_tot = branch_cov = branch_tot = method_cov = method_tot = 0
+          cov_ok = False
+
+          try:
+              root = ET.parse('target/site/jacoco/jacoco.xml').getroot()
+              for counter in root.findall('counter'):
+                  ctype   = counter.get('type')
+                  covered = int(counter.get('covered', 0))
+                  missed  = int(counter.get('missed',  0))
+                  tot     = covered + missed
+                  pct     = (covered / tot * 100) if tot > 0 else 0.0
+                  if   ctype == 'LINE':   line_pct,   line_cov,   line_tot   = pct, covered, tot
+                  elif ctype == 'BRANCH': branch_pct, branch_cov, branch_tot = pct, covered, tot
+                  elif ctype == 'METHOD': method_pct, method_cov, method_tot = pct, covered, tot
+              cov_ok = True
+          except Exception as e:
+              print(f'Warning: could not parse JaCoCo XML: {e}')
+
+          threshold = 70.0
+          c_status  = '✅' if line_pct >= threshold else '⚠️'
+
+          # ── Build the Markdown report ─────────────────────
+          lines = []
+          lines += [f'## {t_status} Test Results\n']
+          lines += ['| | Metric | Count |', '|:---:|:---|---:|']
+          lines += [f'| ✅ | Passed  | {passed} |']
+          lines += [f'| ❌ | Failed  | {failures + errors} |']
+          lines += [f'| ⏭️ | Skipped | {skipped} |']
+          lines += [f'| 📊 | **Total** | **{total}** |']
+
+          if failed_list:
+              lines += ['', '### ❌ Failing Tests']
+              for t in failed_list[:15]:
+                  lines += [f'- `{t}`']
+              if len(failed_list) > 15:
+                  lines += [f'- *… and {len(failed_list) - 15} more*']
+
+          lines += ['']
+
+          if cov_ok:
+              lines += [f'## {c_status} Coverage\n']
+              lines += ['| | Type | Coverage | Covered / Total |', '|:---:|:---|---:|---:|']
+              lines += [f'| 📏 | Lines    | **{line_pct:.1f}%**  | {line_cov} / {line_tot}     |']
+              lines += [f'| 🌿 | Branches | {branch_pct:.1f}%    | {branch_cov} / {branch_tot} |']
+              lines += [f'| 🔧 | Methods  | {method_pct:.1f}%    | {method_cov} / {method_tot} |']
+              if line_pct < threshold:
+                  lines += ['', f'> ⚠️ Line coverage **{line_pct:.1f}%** is below the required **{threshold:.0f}%** threshold']
+          else:
+              lines += ['## ⚠️ Coverage report not available']
+
+          report = '\n'.join(lines) + '\n'
+
+          # Write to Actions job summary
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write(report)
+
+          # Write to file for the PR comment step below
+          with open('/tmp/ci-report.md', 'w') as f:
+              f.write(report)
+
+          print(report)
+          PYEOF
+
+      # ── Sticky PR comment ─────────────────────────────────
+      # Posts a single comment that is updated (not duplicated) on
+      # every push to the same PR using a hidden HTML marker.
+      # Only runs on pull_request events — skipped on direct pushes.
+      - name: 💬 Post CI report to PR
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            if (!fs.existsSync('/tmp/ci-report.md')) {
+              console.log('CI report file not found — skipping comment.');
+              return;
+            }
+
+            const marker  = '<!-- ktestify-ci-report -->';
+            const runUrl  = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            const content = fs.readFileSync('/tmp/ci-report.md', 'utf8');
+            const body    = `${marker}\n${content}\n---\n*🔄 [CI run #${process.env.GITHUB_RUN_NUMBER}](${runUrl}) · ${new Date().toUTCString()}*`;
+
+            // Find an existing comment with our marker
+            const { data: comments } = await github.rest.issues.listComments({
+              owner:        context.repo.owner,
+              repo:         context.repo.repo,
+              issue_number: context.issue.number,
+              per_page:     100,
+            });
+
+            const existing = comments.find(c => c.body?.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner:      context.repo.owner,
+                repo:       context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              console.log(`✅ Updated CI report comment #${existing.id}`);
+            } else {
+              await github.rest.issues.createComment({
+                owner:        context.repo.owner,
+                repo:         context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+              console.log('✅ Created new CI report comment');
+            }
+
+  # ── 3. Aggregate status (single required check) ───────────
+  ci-success:
+    name: ✅ CI passed
+    runs-on: ubuntu-latest
+    needs: [ lint, build ]
+    if: always()
+    permissions:
+      contents: read
+    steps:
+      - name: Evaluate results
+        run: |
+          lint="${{ needs.lint.result }}"
+          build="${{ needs.build.result }}"
+          echo "lint  → $lint"
+          echo "build → $build"
+          if [[ "$lint" != "success" || "$build" != "success" ]]; then
+            echo "❌ One or more jobs failed."
+            exit 1
+          fi
+          echo "✅ All CI jobs passed."
+
+
+
+
+
+
+

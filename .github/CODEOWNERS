@@ -1,0 +1,32 @@
+# CODEOWNERS — Automatic review assignment
+#
+# Order matters: last matching pattern takes precedence.
+# Use GitHub team slugs (@org/team) or individual accounts.
+#
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ── Default: all files require the core team ──────────────
+*                               @nil-malh
+
+# ── Java source ───────────────────────────────────────────
+src/main/java/                  @nil-malh
+src/test/java/                  @nil-malh
+
+# ── Configuration & resources ─────────────────────────────
+src/main/resources/             @nil-malh
+src/test/resources/             @nil-malh
+
+# ── Build & dependency management ─────────────────────────
+pom.xml                         @nil-malh
+
+# ── CI / CD pipelines ─────────────────────────────────────
+.github/                        @nil-malh
+
+# ── Documentation ─────────────────────────────────────────
+*.md                            @nil-malh
+DOCUMENTATION.md                @nil-malh
+
+# ── Security policy ───────────────────────────────────────
+SECURITY.md                     @nil-malh
+.github/SECURITY.md             @nil-malh
+

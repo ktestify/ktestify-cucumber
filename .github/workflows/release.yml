@@ -1,0 +1,213 @@
+# ============================================================
+# Release — Publish to Maven Central
+#
+# Workflow:
+#   1. Developer triggers this workflow manually and provides:
+#        • release version  (e.g. 0.3.0)
+#        • next dev version (e.g. 0.3.1-SNAPSHOT)
+#   2. Release version is set in pom.xml via `versions:set`.
+#   3. Full build runs with the `release` Maven profile
+#      (GPG signing + central-publishing-maven-plugin).
+#   4. Artifact is published to Maven Central.
+#   5. Git is tagged and pom.xml is bumped to next SNAPSHOT.
+#   6. A GitHub Release is created with auto-generated notes.
+#
+# Required secrets (set in Settings → Secrets → Actions):
+#   GH_PAT              — PAT with `contents: write` (to push tags)
+#   CENTRAL_USERNAME    — Maven Central Portal username token
+#   CENTRAL_PASSWORD    — Maven Central Portal password token
+#   GPG_PRIVATE_KEY     — ASCII-armored GPG private key
+#   GPG_PASSPHRASE      — Passphrase for the GPG key
+#
+# The job runs inside a `release` GitHub Environment so a
+# mandatory approval gate can be configured there.
+# ============================================================
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: "Release version — no 'v' prefix, no '-SNAPSHOT' (e.g. 0.3.0)"
+        required: true
+        type: string
+      next-snapshot-version:
+        description: "Next development version — must end with -SNAPSHOT (e.g. 0.3.1-SNAPSHOT)"
+        required: true
+        type: string
+      dry-run:
+        description: "Dry run — build & sign but skip publish, tag & GitHub Release"
+        required: false
+        default: "false"
+        type: choice
+        options: [ "false", "true" ]
+
+permissions:
+  contents: write   # needed to push tags and create the GitHub Release
+
+env:
+  JAVA_VERSION: "25"
+  MAVEN_OPTS: "-Xmx2048m -XX:+EnableDynamicAgentLoading"
+
+# ──────────────────────────────────────────────────────────────
+jobs:
+  release:
+    name: 🚀 Release ${{ inputs.release-version }}
+    runs-on: ubuntu-latest
+    environment: release    # ← configure approval & env secrets here
+    permissions:
+      contents: write       # push tag + create GitHub Release
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────
+      - name: Checkout (full history for tagging)
+        uses: actions/checkout@v6   # v6: credentials stored in $RUNNER_TEMP
+        with:
+          # Use a PAT so the push step can trigger downstream workflows
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
+
+      # ── Java & Maven ──────────────────────────────────────
+      - name: Set up Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+          # Inject Maven Central credentials into ~/.m2/settings.xml
+          server-id: central
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+
+      # ── GPG ───────────────────────────────────────────────
+      - name: Import GPG signing key
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | \
+            gpg --batch --import --no-tty
+          # Trust the imported key at level 5 (ultimate)
+          KEY_ID=$(gpg --list-secret-keys --keyid-format LONG \
+                     --with-colons 2>/dev/null \
+                   | awk -F: '/^sec/{print $5; exit}')
+          echo "${KEY_ID}:6:" | gpg --import-ownertrust --batch --no-tty
+          echo "Imported key: ${KEY_ID}"
+
+      # ── Set release version ───────────────────────────────
+      - name: Set pom.xml to release version ${{ inputs.release-version }}
+        run: |
+          mvn versions:set \
+            -DnewVersion=${{ inputs.release-version }} \
+            --no-transfer-progress
+          mvn versions:commit --no-transfer-progress
+
+      # ── Build, test & sign ────────────────────────────────
+      - name: Build with release profile (compile + test + GPG sign)
+        run: |
+          mvn verify -P release \
+            --no-transfer-progress \
+            -Dspotless.check.skip=true \
+            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: "true"
+
+      # ── Publish ───────────────────────────────────────────
+      - name: Publish to Maven Central
+        if: inputs.dry-run == 'false'
+        run: |
+          mvn deploy -P release \
+            --no-transfer-progress \
+            -DskipTests \
+            -Dspotless.check.skip=true \
+            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        env:
+          MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+
+      # ── Commit, tag & push ────────────────────────────────
+      - name: Commit release version & tag
+        if: inputs.dry-run == 'false'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pom.xml
+          git commit -m "chore(release): prepare release ${{ inputs.release-version }} [skip ci]"
+          git tag -a "v${{ inputs.release-version }}" \
+            -m "Release ${{ inputs.release-version }}"
+
+      # ── Generate release notes with git-cliff ─────────────
+      # Runs after the tag is created so cliff knows the version boundary.
+      - name: Generate release notes (git-cliff)
+        if: inputs.dry-run == 'false'
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          # Only commits since the previous tag → this release's notes
+          args: --verbose --latest --strip header
+        env:
+          OUTPUT: RELEASE_NOTES.md
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      # ── Update CHANGELOG.md with the new release ──────────
+      - name: Update CHANGELOG.md (git-cliff full history)
+        if: inputs.dry-run == 'false'
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --verbose
+        env:
+          OUTPUT: CHANGELOG.md
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Bump to next SNAPSHOT ${{ inputs.next-snapshot-version }}
+        if: inputs.dry-run == 'false'
+        run: |
+          mvn versions:set \
+            -DnewVersion=${{ inputs.next-snapshot-version }} \
+            --no-transfer-progress
+          mvn versions:commit --no-transfer-progress
+          git add pom.xml CHANGELOG.md
+          git commit -m "chore(release): prepare next iteration ${{ inputs.next-snapshot-version }} [skip ci]"
+          git push origin main --follow-tags
+
+      # ── GitHub Release ────────────────────────────────────
+      - name: Create GitHub Release
+        if: inputs.dry-run == 'false'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ inputs.release-version }}
+          name: "ktestify ${{ inputs.release-version }}"
+          # Use the git-cliff generated notes (not GitHub's auto-generated ones)
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: false
+          files: |
+            target/ktestify-core-${{ inputs.release-version }}.jar
+            target/ktestify-core-${{ inputs.release-version }}-sources.jar
+            target/ktestify-core-${{ inputs.release-version }}-javadoc.jar
+
+      # ── Dry-run summary ───────────────────────────────────
+      - name: Generate dry-run changelog preview
+        if: inputs.dry-run == 'true'
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --verbose --unreleased --bump
+        env:
+          OUTPUT: RELEASE_NOTES_DRYRUN.md
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Dry-run summary
+        if: inputs.dry-run == 'true'
+        run: |
+          echo "✅ Dry-run complete — artifacts were built & signed."
+          echo "   Release version : ${{ inputs.release-version }}"
+          echo "   Next SNAPSHOT   : ${{ inputs.next-snapshot-version }}"
+          echo "   Nothing was published, tagged, or pushed."
+          echo ""
+          echo "📋 Release notes preview:"
+          cat RELEASE_NOTES_DRYRUN.md
+
+
+

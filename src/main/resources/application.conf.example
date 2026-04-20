@@ -1,0 +1,81 @@
+# ktestify Application Configuration
+# ====================================
+# Copy this file to your project's resources folder and customize as needed.
+# All values here will override the defaults from reference.conf.
+#
+# Environment variables can be used with ${?ENV_VAR} syntax.
+
+ktestify {
+
+  # Kafka Configuration
+  kafka {
+    # Override bootstrap servers (required for production)
+    bootstrap-servers = "localhost:9092"
+    # bootstrap-servers = ${?KAFKA_BOOTSTRAP_SERVERS}
+
+    # Security protocol: PLAINTEXT, SSL, SASL_PLAINTEXT, SASL_SSL
+    # security-protocol = "SASL_SSL"
+
+    # Producer settings (optional overrides)
+    # producer {
+    #   acks = "all"
+    #   retries = 5
+    # }
+
+    # Consumer settings (optional overrides)
+    # consumer {
+    #   group-id = "my-test-consumer-group"
+    #   auto-offset-reset = "earliest"
+    # }
+
+    # Security settings (uncomment and configure for secured clusters)
+    # security {
+    #   sasl-mechanism = "PLAIN"
+    #   sasl-jaas-config = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"user\" password=\"password\";"
+    #
+    #   # SSL settings
+    #   ssl-truststore-location = "/path/to/truststore.jks"
+    #   ssl-truststore-password = "truststorePassword"
+    # }
+  }
+
+  # Schema Registry Configuration
+  schema-registry {
+    url = "http://localhost:8081"
+    # url = ${?SCHEMA_REGISTRY_URL}
+
+    # Authentication (uncomment for secured Schema Registry)
+    # auth {
+    #   basic-auth-credentials-source = "USER_INFO"
+    #   basic-auth-user-info = "username:password"
+    # }
+  }
+
+  # Framework Configuration
+  framework {
+    # Timeout settings
+    timeouts {
+      # How long to wait for a consumer to receive a matching message
+      default-read-timeout = 30s
+
+      # How far back in time to look for messages
+      consumer-delta-time = 60s
+    }
+
+    # Directory settings
+    directories {
+      # Base directory for test payloads and expected outputs
+      assets = "src/test/resources/assets"
+
+      # Directory for test reports
+      output = "target/test-output"
+    }
+
+    # Reporting settings
+    reporting {
+      enabled = true
+      format = "html"
+    }
+  }
+}
+

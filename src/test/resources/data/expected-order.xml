@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Order>
+    <OrderId>order-xml-001</OrderId>
+    <Amount>149.99</Amount>
+    <Currency>EUR</Currency>
+    <Status>PENDING</Status>
+    <ProcessedDateTime>2026-04-17T10:00:00Z</ProcessedDateTime>
+</Order>

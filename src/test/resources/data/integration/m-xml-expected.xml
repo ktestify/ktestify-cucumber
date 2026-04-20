@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Order>
+    <OrderId>m-xml-001</OrderId>
+    <Amount>77.00</Amount>
+    <Currency>USD</Currency>
+    <Status>ACTIVE</Status>
+</Order>

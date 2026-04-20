@@ -1,0 +1,99 @@
+# ============================================================
+# Dependabot Configuration
+# ============================================================
+version: 2
+
+updates:
+
+  # ── Maven dependencies ────────────────────────────────────
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Paris
+    # Auto-rebase PRs that fall behind main
+    rebase-strategy: auto
+    open-pull-requests-limit: 15
+    labels:
+      - dependencies
+      - java
+    commit-message:
+      # "deps: bump …" → parsed by git-cliff into "⬆️ Dependency Updates"
+      prefix: "deps"
+      include: "scope"
+
+    groups:
+      # ── Version-update groups (reduce weekly PR noise) ──────
+      kafka:
+        applies-to: version-updates
+        patterns:
+          - "org.apache.kafka:*"
+          - "io.confluent:*"
+      testcontainers:
+        applies-to: version-updates
+        patterns:
+          - "org.testcontainers:*"
+      junit5:
+        applies-to: version-updates
+        patterns:
+          - "org.junit.jupiter:*"
+          - "org.junit.platform:*"
+      cucumber:
+        applies-to: version-updates
+        patterns:
+          - "io.cucumber:*"
+      mockito:
+        applies-to: version-updates
+        patterns:
+          - "org.mockito:*"
+      commons:
+        applies-to: version-updates
+        patterns:
+          - "org.apache.commons:*"
+          - "commons-*:*"
+      logging:
+        applies-to: version-updates
+        patterns:
+          - "org.slf4j:*"
+          - "ch.qos.logback:*"
+          - "org.apache.logging.log4j:*"
+
+    # ── Ignore major bumps for ecosystems with breaking changes ─
+    # Kafka and Confluent major bumps require deliberate migration work.
+    # IBM MQ major bumps can also have significant API changes.
+    ignore:
+      - dependency-name: "org.apache.kafka:*"
+        update-types: [ "version-update:semver-major" ]
+      - dependency-name: "io.confluent:*"
+        update-types: [ "version-update:semver-major" ]
+      - dependency-name: "com.ibm.mq:*"
+        update-types: [ "version-update:semver-major" ]
+
+  # ── GitHub Actions ────────────────────────────────────────
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Paris
+    rebase-strategy: auto
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: "deps(ci)"
+      include: "scope"
+    groups:
+      actions-core:
+        applies-to: version-updates
+        patterns: [ "actions/*" ]
+
+
+
+
+
+

@@ -1,0 +1,62 @@
+# ============================================================
+# Dependency Review
+#
+# Runs on every pull request targeting `main` and blocks
+# merges that introduce:
+#   • dependencies with known CVEs (severity ≥ moderate)
+#   • dependencies under non-permissive licences
+#
+# No secrets required — uses GH_TOKEN automatically.
+# ============================================================
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pull-requests: write   # needed to post an inline PR comment
+
+# ──────────────────────────────────────────────────────────────
+jobs:
+  dependency-review:
+    name: 🔒 Dependency Review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write   # post the summary comment on the PR
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6   # v6: credentials stored in $RUNNER_TEMP
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          # Fail the check for any vulnerability rated moderate or above
+          fail-on-severity: moderate
+
+          # Post a detailed summary as a PR comment
+          comment-summary-in-pr: always
+
+          # Security checks
+          vulnerability-check: true
+
+          # Licence checks — allow common open-source-compatible licences
+          license-check: true
+          allow-licenses: >-
+            Apache-2.0,
+            MIT,
+            BSD-2-Clause,
+            BSD-3-Clause,
+            ISC,
+            LGPL-2.0-only,
+            LGPL-2.1-only,
+            LGPL-2.1-or-later,
+            EPL-1.0,
+            EPL-2.0,
+            CDDL-1.0,
+            CC0-1.0
+
+

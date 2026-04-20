@@ -1,0 +1,98 @@
+name: 🐛 Bug Report
+description: Report a reproducible bug in ktestify
+title: "[Bug]: "
+labels: [ "bug", "triage" ]
+
+body:
+
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill this in! 🙏
+        Please be as specific as possible — the more detail you provide,
+        the faster we can reproduce and fix the issue.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight checklist
+      options:
+        - label: I searched [existing issues](https://github.com/ktestify/ktestify-coreissues) and this is not a duplicate.
+          required: true
+        - label: I read the [documentation](https://github.com/ktestify/ktestify-coreblob/main/DOCUMENTATION.md).
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: "When I call … with … I get … instead of …"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal, complete, reproducible example.
+      placeholder: |
+        1. Configure ktestify with …
+        2. Produce a message with …
+        3. Call AvroKafkaConsumer …
+        4. Observe the exception …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behaviour
+      description: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behaviour
+      description: What actually happened? Please include the **full stack trace** if applicable.
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: ktestify-version
+    attributes:
+      label: ktestify Version
+      placeholder: "e.g. 0.2.51"
+    validations:
+      required: true
+
+  - type: input
+    id: java-version
+    attributes:
+      label: Java Version
+      placeholder: "e.g. Java 25.0.1 (Temurin)"
+    validations:
+      required: true
+
+  - type: input
+    id: kafka-version
+    attributes:
+      label: Kafka / Confluent Version
+      placeholder: "e.g. Kafka 4.x, Confluent 8.x"
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration (sanitize sensitive data)
+      description: Relevant `application.conf` / `reference.conf` snippet.
+      render: hocon
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: "Anything else: OS, Docker version, CI environment, …"
+

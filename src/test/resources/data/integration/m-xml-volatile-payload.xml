@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Order>
+    <OrderId>m-xml-vol</OrderId>
+    <Amount>55.00</Amount>
+    <Currency>EUR</Currency>
+    <Status>PENDING</Status>
+    <ProcessedAt>2026-04-17T20:00:00Z</ProcessedAt>
+    <AuditTraceId>trace-abc-123</AuditTraceId>
+</Order>

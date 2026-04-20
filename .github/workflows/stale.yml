@@ -1,0 +1,76 @@
+# ============================================================
+# Stale Issues & Pull Requests
+#
+# Automatically labels and closes inactive items to keep the
+# backlog clean:
+#
+#   Issues  → stale after 60 days without activity
+#             closed after a further 14 days of silence
+#
+#   PRs     → stale after 30 days without activity
+#             closed after a further 7 days of silence
+#
+# Items pinned or labelled `keep-open` / `security` are exempt.
+# ============================================================
+name: Stale
+
+on:
+  schedule:
+    # Run at 01:00 UTC every day
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+# ──────────────────────────────────────────────────────────────
+jobs:
+  stale:
+    name: 🕰️ Mark & close stale items
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/stale@v10   # v10 is the current latest (was v9)
+        with:
+          # ── Issues ────────────────────────────────────────
+          days-before-issue-stale: 60
+          days-before-issue-close: 14
+          stale-issue-label:   "stale"
+          stale-issue-message: >
+            👋 This issue has been automatically marked as stale because it
+            has had no activity in the last 60 days.
+            It will be closed in 14 days if no further activity occurs.
+            If this is still relevant, please leave a comment or remove
+            the `stale` label.
+          close-issue-message: >
+            🔒 Closing this issue due to prolonged inactivity.
+            Feel free to reopen it if the problem resurfaces.
+
+          # ── Pull Requests ─────────────────────────────────
+          days-before-pr-stale: 30
+          days-before-pr-close: 7
+          stale-pr-label:   "stale"
+          stale-pr-message: >
+            👋 This pull request has been automatically marked as stale
+            because it has had no activity in the last 30 days.
+            It will be closed in 7 days if no further activity occurs.
+            If work is still in progress, please push a commit or leave
+            a comment.
+          close-pr-message: >
+            🔒 Closing this pull request due to prolonged inactivity.
+            Please reopen it when you are ready to continue.
+
+          # ── Exemptions ───────────────────────────────────
+          exempt-issue-labels: "keep-open,security,pinned,breaking-change"
+          exempt-pr-labels:    "keep-open,security,pinned,work-in-progress"
+          exempt-all-milestones: true
+
+          # ── Misc ──────────────────────────────────────────
+          remove-stale-when-updated: true
+          operations-per-run: 100
+
+

@@ -1,0 +1,137 @@
+# ============================================================
+# CodeQL — Static Analysis & Security Scanning
+#
+# Replaces SonarCloud. Uses GitHub's native CodeQL engine.
+#
+# Triggers:
+#   • push  → main        (every merge)
+#   • pull_request → main (every PR, with inline PR annotations)
+#   • schedule weekly     (Sunday 02:00 UTC — catches supply-chain
+#                          issues not triggered by code changes)
+#
+# Key design choices (from Context7 / CodeQL 3.0 docs):
+#   • build-mode: none   → GA since CodeQL 3.0; analyses Java
+#                          source WITHOUT running Maven or Docker.
+#                          No Testcontainers, no GPG, no build time.
+#   • security-extended  → Extended query suite — more CVE patterns
+#                          than the default "code-scanning" suite.
+#   • java-kotlin        → Current recommended language specifier
+#                          for Java (and Kotlin) projects.
+#   • SARIF results are uploaded to the GitHub Security tab and
+#     appear as inline PR annotations automatically.
+#
+# No secrets required — uses GH_TOKEN only.
+# ============================================================
+name: CodeQL
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/pull_request_template.md"
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/pull_request_template.md"
+  schedule:
+    # Weekly full scan — Sunday 02:00 UTC
+    # Catches newly-disclosed CVEs even without code changes
+    - cron: "0 2 * * 0"
+
+# Minimal workflow-level default; job overrides what it needs
+permissions:
+  contents: read
+
+# Cancel in-progress scans for the same branch (keep latest)
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# ──────────────────────────────────────────────────────────────
+jobs:
+  analyze:
+    name: 🔐 CodeQL — ${{ matrix.language }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents:        read    # checkout
+      security-events: write   # upload SARIF → GitHub Security tab
+      actions:         read    # required for private repos
+      pull-requests:   read    # inline PR annotations
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # java-kotlin is the modern specifier for Java (and Kotlin) projects
+        language: [ java-kotlin ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      # ── Initialize CodeQL ──────────────────────────────────
+      # build-mode: none  → CodeQL 3.0 GA feature.
+      #   Extracts Java source without executing Maven at all.
+      #   No Docker, no Testcontainers, ~3x faster than autobuild.
+      #
+      # queries: security-extended
+      #   Includes all default "code-scanning" queries PLUS:
+      #   • SSRF, deserialization, path traversal, log injection
+      #   • GitHub Actions-specific CWEs (injection, poisoning)
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-extended
+
+      # ── Perform analysis ───────────────────────────────────
+      # upload: never  → we handle the upload in the next two steps
+      #   so that a missing Advanced Security licence never kills
+      #   the job (the analysis itself still runs and fails on real
+      #   findings).
+      - name: Perform CodeQL Analysis
+        id: codeql-analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
+          upload: never          # decouple analysis from upload
+          output: sarif-results  # save SARIF locally for both steps below
+
+      # ── Upload to GitHub Security tab ─────────────────────
+      # Requires GitHub Advanced Security (free for public repos,
+      # paid licence for private repos).
+      # continue-on-error: true → job succeeds even when GHAS is
+      # not enabled; results are still available as the artifact below.
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        continue-on-error: true   # gracefully skips if GHAS not enabled
+        with:
+          sarif_file: sarif-results
+          category: "/language:${{ matrix.language }}"
+
+      # ── Always save SARIF as a downloadable artifact ──────
+      # Fallback when Advanced Security is not available:
+      # open the .sarif file in VS Code with the SARIF Viewer
+      # extension, or import it into any SARIF-compatible tool.
+      - name: Upload SARIF artifact (fallback)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: codeql-sarif-${{ matrix.language }}-${{ github.run_id }}
+          path: sarif-results/
+          retention-days: 30
+
