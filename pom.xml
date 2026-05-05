@@ -638,6 +638,10 @@
         <!-- Profile for integration tests -->
         <profile>
             <id>integration-tests</id>
+            <properties>
+                <!-- Default tag filter when -Dcucumber.it.tags is not supplied -->
+                <cucumber.it.tags>@integration</cucumber.it.tags>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -648,10 +652,8 @@
                             <includes>
                                 <include>**/*IT.java</include>
                             </includes>
-                            <argLine>
-                                -Xmx2048m
-                                -XX:+EnableDynamicAgentLoading
-                            </argLine>
+                            <argLine>-Xmx2048m
+                                -XX:+EnableDynamicAgentLoading</argLine>
                             <systemPropertyVariables>
                                 <!-- Cucumber tag filter: override with -Dcucumber.it.tags="@smoke" -->
                                 <cucumber.it.tags>${cucumber.it.tags}</cucumber.it.tags>
@@ -670,10 +672,6 @@
                     </plugin>
                 </plugins>
             </build>
-            <properties>
-                <!-- Default tag filter when -Dcucumber.it.tags is not supplied -->
-                <cucumber.it.tags>@integration</cucumber.it.tags>
-            </properties>
         </profile>
     </profiles>
 
