@@ -18,10 +18,12 @@
  */
 package io.github.ktestify.steps;
 
+import static io.github.ktestify.utils.DataTableUtils.Constants.DATA_TABLE_TOPIC_ALIAS;
+import static io.github.ktestify.utils.DataTableUtils.Constants.DATA_TABLE_TOPIC_NAME;
+
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Then;
-import io.github.ktestify.constants.ConfigConstants;
 import io.github.ktestify.models.Topic;
 import io.github.ktestify.services.ConsumerValidationService;
 import io.github.ktestify.utils.DataTableUtils;
@@ -135,19 +137,6 @@ public class ValidationStepDefinition {
     }
 
     // =========================================================================
-    // IBM MQ queue validation (stub — future implementation)
-    // =========================================================================
-
-    @Then("expected queue record from file")
-    public void thenExpectedQueueRecordFromFile(DataTable dataTable) {
-        Map<String, String> row = DataTableUtils.firstRow(dataTable);
-        String queueAlias = DataTableUtils.getString(row, ConfigConstants.DATA_TABLE_QUEUE_ALIAS);
-        var queue = resources.queues.getOrThrow(queueAlias);
-        log.warn("IBM MQ consumer not yet implemented. Queue: '{}'", queue.getQueueName());
-        throw new UnsupportedOperationException("IBM MQ consumer is not yet implemented in this version.");
-    }
-
-    // =========================================================================
     // Watcher — negative assertion (record must NOT appear)
     // =========================================================================
 
@@ -178,11 +167,11 @@ public class ValidationStepDefinition {
      * not found.
      */
     private Topic resolveTopic(Map<String, String> row) {
-        String alias = DataTableUtils.getString(row, ConfigConstants.DATA_TABLE_TOPIC_ALIAS);
+        String alias = DataTableUtils.getString(row, DATA_TABLE_TOPIC_ALIAS);
         if (alias != null && resources.topics.contains(alias)) {
             return resources.topics.getOrThrow(alias);
         }
-        String name = DataTableUtils.getString(row, ConfigConstants.DATA_TABLE_TOPIC_NAME);
+        String name = DataTableUtils.getString(row, DATA_TABLE_TOPIC_NAME);
         return resources.topics.getOrThrow(name);
     }
 

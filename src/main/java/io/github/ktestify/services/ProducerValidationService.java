@@ -18,7 +18,8 @@
  */
 package io.github.ktestify.services;
 
-import io.github.ktestify.constants.ConfigConstants;
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
+
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.io.kafka.KafkaClientFactory;
 import io.github.ktestify.io.kafka.ProducerContext;
@@ -43,6 +44,9 @@ import org.apache.avro.generic.GenericRecord;
 @Slf4j
 public class ProducerValidationService {
 
+    public static final String DATA_TABLE_HEADER_FILE = "headerFile";
+
+
     // =========================================================================
     // Raw (String) producers
     // =========================================================================
@@ -55,9 +59,9 @@ public class ProducerValidationService {
      * @param assets optional assets directory for resolving relative paths
      */
     public void sendRawFromFile(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
-        String filePath = resolve(assets, getString(row, ConfigConstants.DATA_TABLE_FILE));
-        String recordKey = getString(row, ConfigConstants.DATA_TABLE_RECORD_KEY);
-        String headerFilePath = resolve(assets, getString(row, ConfigConstants.DATA_TABLE_HEADER_FILE));
+        String filePath = resolve(assets, getString(row, DATA_TABLE_FILE));
+        String recordKey = getString(row, DATA_TABLE_RECORD_KEY);
+        String headerFilePath = resolve(assets, getString(row, DATA_TABLE_HEADER_FILE));
 
         File payloadFile = new File(filePath);
         Map<String, String> headers = loadHeaders(headerFilePath);
@@ -91,10 +95,10 @@ public class ProducerValidationService {
      * @param assets optional assets directory
      */
     public void sendAvroFromFile(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
-        String filePath = resolve(assets, getString(row, ConfigConstants.DATA_TABLE_FILE));
-        String recordKey = getString(row, ConfigConstants.DATA_TABLE_RECORD_KEY);
-        String schemaName = getString(row, ConfigConstants.DATA_TABLE_SCHEMA_NAME);
-        String schemaVersion = getString(row, ConfigConstants.DATA_TABLE_SCHEMA_VERSION);
+        String filePath = resolve(assets, getString(row, DATA_TABLE_FILE));
+        String recordKey = getString(row, DATA_TABLE_RECORD_KEY);
+        String schemaName = getString(row, DATA_TABLE_SCHEMA_NAME);
+        String schemaVersion = getString(row, DATA_TABLE_SCHEMA_VERSION);
 
         File payloadFile = new File(filePath);
 

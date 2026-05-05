@@ -136,4 +136,53 @@ public final class DataTableUtils {
     public static Optional<String> getOptional(DataTable dataTable, String column) {
         return Optional.ofNullable(getString(dataTable, column));
     }
+
+    public static class Constants {
+        private Constants() {}
+
+        // Topic related
+        public static final String DATA_TABLE_TOPIC_NAME = "topicName";
+        public static final String DATA_TABLE_TOPIC_ALIAS = "topicAlias";
+        public static final String DATA_TABLE_FILE = "file";
+        public static final String DATA_TABLE_FILES = "files";
+        public static final String DATA_TABLE_NAMESPACE = "namespace";
+        public static final String DATA_TABLE_NAMESPACE_ALIAS = "namespaceAlias";
+        public static final String DATA_TABLE_RECORD_KEY = "recordKey";
+        public static final String DATA_TABLE_RECORDS_KEYS_VALUES = "recordsKeysValues";
+
+        public static final String DATA_TABLE_RECORD_KEY_VALUE = "recordKeyValue";
+        public static final String DATA_TABLE_READ_TIMEOUT = "consumerReadTimeout";
+        public static final String DATA_TABLE_TOPIC_TYPE = "topicType";
+
+        public static final String DATA_TABLE_EXPECTED_RECORD_KEY = "expectedRecordKey";
+        public static final String EXPECTED_RECORD_KEY = "expectedRecordKey";
+
+        public static final String DATA_TABLE_EXPECTED_RECORDS_COUNT = "expectedRecordsCount";
+        public static final String EXPECTED_RECORDS_COUNT = "expectedRecordsCount";
+
+        public static final String DATA_TABLE_CONSUMER_DELTA_TIME = "consumerDeltaTime";
+
+        // schema
+        public static final String DATA_TABLE_SCHEMA_NAME = "schemaName";
+        public static final String DATA_TABLE_SCHEMA_VERSION = "schemaVersion";
+        public static final String DATA_TABLE_SCHEMA_ALIAS = "schemaAlias";
+
+        // Field matcher
+
+        public static final String DATA_TABLE_FIELD_TO_MATCH_LINE = "line";
+        public static final String DATA_TABLE_FIELD_TO_MATCH_FROM = "from";
+        public static final String DATA_TABLE_FIELD_TO_MATCH_TO = "to";
+
+        public static final String DATA_TABLE_FIELD_TO_MATCH_KEY = "key";
+        public static final String DATA_TABLE_FIELD_TO_MATCH_VALUE = "value";
+
+        public static final String DATA_TABLE_FIELD_TO_MATCH_EXCLUDE_ELEMENTS = "excludedElements";
+
+        public static final String DATA_TABLE_FIELD_TO_MATCH_XPATH = "xpathExpressions";
+        public static final String DATA_TABLE_FIELD_TO_MATCH_EXCLUDED_KEYS = "excludedKeys";
+
+        // Script executions
+        public static final String DATA_TABLE_SCRIPT_PATH = "scriptPath";
+        public static final String DATA_TABLE_SCRIPT_ARGS = "scriptArgs";
+    }
 }

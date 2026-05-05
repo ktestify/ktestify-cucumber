@@ -120,7 +120,7 @@ public class KtestifyMain {
 
     /**
      * Builds the final argument array for the Cucumber CLI. If the caller supplies arguments they are used as-is (with
-     * glue injected if absent). Otherwise a fully defaulted set is built from env vars.
+     * glue injected if absent). Otherwise, a fully defaulted set is built from env vars.
      */
     static String[] buildArgs(String[] userArgs) {
         if (userArgs != null && userArgs.length > 0) {

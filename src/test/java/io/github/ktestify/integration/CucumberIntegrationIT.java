@@ -53,8 +53,7 @@ import org.testcontainers.utility.DockerImageName;
  * mvn verify -Pintegration-tests -Dcucumber.it.tags="@integration and @batch"
  * </pre>
  *
- * <p>The test is picked up by the Maven Failsafe plugin (suffix {@code IT}) during the
- * {@code integration-test} phase.
+ * <p>The test is picked up by the Maven Failsafe plugin (suffix {@code IT}) during the {@code integration-test} phase.
  */
 class CucumberIntegrationIT {
 
@@ -135,8 +134,8 @@ class CucumberIntegrationIT {
      * Runs all Cucumber scenarios whose tag expression matches {@code cucumber.it.tags} system property (default:
      * {@value #DEFAULT_TAGS}).
      *
-     * <p>Reports are written to {@code target/cucumber-reports/} in both JSON and pretty formats so that the existing CI
-     * summary / PR-comment steps can consume them without modification.
+     * <p>Reports are written to {@code target/cucumber-reports/} in both JSON and pretty formats so that the existing
+     * CI summary / PR-comment steps can consume them without modification.
      */
     @Test
     void runIntegrationScenarios() {
@@ -151,12 +150,14 @@ class CucumberIntegrationIT {
             "src/test/resources/features"
         };
 
-        System.out.printf(
-                "[CucumberIntegrationIT] Running Cucumber with tags='%s', assetsDir='%s'%n", tags, assetsDir);
+        System.out.printf("[CucumberIntegrationIT] Running Cucumber with tags='%s', assetsDir='%s'%n", tags, assetsDir);
 
         byte exitCode = Main.run(cucumberArgs, Thread.currentThread().getContextClassLoader());
 
-        assertEquals(0, exitCode, "One or more Cucumber @integration scenarios failed — check target/cucumber-reports/cucumber.json for details.");
+        assertEquals(
+                0,
+                exitCode,
+                "One or more Cucumber @integration scenarios failed — check target/cucumber-reports/cucumber.json for details.");
     }
 
     // ─────────────────────────────────────────────────────────────────────────────────────────
@@ -173,12 +174,9 @@ class CucumberIntegrationIT {
                 + schemaRegistryContainer.getMappedPort(SCHEMA_REGISTRY_PORT);
         String assetsDir = resolveAssetsDir();
 
-        System.out.printf(
-                "[CucumberIntegrationIT] Kafka bootstrap-servers : %s%n", bootstrapServers);
-        System.out.printf(
-                "[CucumberIntegrationIT] Schema Registry URL     : %s%n", schemaRegistryUrl);
-        System.out.printf(
-                "[CucumberIntegrationIT] Assets directory        : %s%n", assetsDir);
+        System.out.printf("[CucumberIntegrationIT] Kafka bootstrap-servers : %s%n", bootstrapServers);
+        System.out.printf("[CucumberIntegrationIT] Schema Registry URL     : %s%n", schemaRegistryUrl);
+        System.out.printf("[CucumberIntegrationIT] Assets directory        : %s%n", assetsDir);
 
         Config overrides = ConfigFactory.parseMap(Map.of(
                 "ktestify.kafka.bootstrap-servers", bootstrapServers,
@@ -202,4 +200,3 @@ class CucumberIntegrationIT {
         return Path.of("src", "test", "resources", "data").toAbsolutePath().toString();
     }
 }
-
