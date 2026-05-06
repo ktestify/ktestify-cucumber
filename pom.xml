@@ -108,8 +108,9 @@
         <dependency>
             <groupId>io.github.ktestify</groupId>
             <artifactId>ktestify-core</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>0.1.0-rc1</version>
         </dependency>
+
 
         <!-- ===================================== -->
         <!-- Core Framework Dependencies           -->
@@ -656,6 +657,8 @@
                             <volume>/workspace/assets</volume>
                             <volume>/workspace/config</volume>
                             <volume>/workspace/reports</volume>
+                            <!-- Third-party plugin JARs: drop *.jar files here at runtime -->
+                            <volume>/workspace/plugins</volume>
                         </volumes>
                         <environment>
                             <!-- Sensible defaults — override at runtime via -e flags -->

@@ -85,11 +85,12 @@ jobs:
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | \
             gpg --batch --import --no-tty
           # Trust the imported key at level 5 (ultimate)
-          KEY_ID=$(gpg --list-secret-keys --keyid-format LONG \
-                     --with-colons 2>/dev/null \
-                   | awk -F: '/^sec/{print $5; exit}')
-          echo "${KEY_ID}:6:" | gpg --import-ownertrust --batch --no-tty
-          echo "Imported key: ${KEY_ID}"
+          # Use the fpr record (field 10) — import-ownertrust requires the full
+          # 40-character fingerprint, not the 16-character key ID from sec/$5.
+          KEY_FPR=$(gpg --list-secret-keys --with-colons 2>/dev/null \
+                   | awk -F: '/^fpr/{print $10; exit}')
+          echo "${KEY_FPR}:6:" | gpg --import-ownertrust --batch --no-tty
+          echo "Imported key fingerprint: ${KEY_FPR}"
 
       # ── Set release version ───────────────────────────────
       - name: Set pom.xml to release version ${{ inputs.release-version }}
@@ -104,10 +105,10 @@ jobs:
         run: |
           mvn verify -P release \
             --no-transfer-progress \
-            -Dspotless.check.skip=true \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+            -Dspotless.check.skip=true
         env:
           TESTCONTAINERS_RYUK_DISABLED: "true"
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
       # ── Publish ───────────────────────────────────────────
       - name: Publish to Maven Central
@@ -116,11 +117,11 @@ jobs:
           mvn deploy -P release \
             --no-transfer-progress \
             -DskipTests \
-            -Dspotless.check.skip=true \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+            -Dspotless.check.skip=true
         env:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
       # ── Commit, tag & push ────────────────────────────────
       - name: Commit release version & tag
