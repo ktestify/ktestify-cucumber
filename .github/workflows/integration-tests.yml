@@ -87,7 +87,6 @@ jobs:
       #   • Execute all Cucumber scenarios matching the supplied tag filter
       # ─────────────────────────────────────────────────────────
       - name: 🧪 Run integration tests (Testcontainers + Cucumber)
-        working-directory: ktestify-cucumber
         run: |
           mvn verify \
             --no-transfer-progress \
