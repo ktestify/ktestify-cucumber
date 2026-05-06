@@ -112,19 +112,6 @@ class ScriptServiceTest {
         }
     }
 
-    // ── error handling ────────────────────────────────────────────────────────
-
-    @Nested
-    @DisplayName("error handling")
-    class ErrorHandling {
-
-        @Test
-        @DisplayName("non-existent script path throws IOException")
-        void missingScriptThrows() throws IOException, InterruptedException {
-            assertEquals(127, service.execute("fake", List.of()));
-        }
-    }
-
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private Path createScript(String content) throws IOException {

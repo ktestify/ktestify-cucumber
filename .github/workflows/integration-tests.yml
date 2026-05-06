@@ -78,15 +78,6 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           cache: maven
 
-      # ── 3. Build ktestify-core (local Maven install) ─────────
-      - name: 🔨 Build & install ktestify-core
-        working-directory: ktestify-core
-        run: |
-          mvn install \
-            --no-transfer-progress \
-            -DskipTests \
-            -Dspotless.check.skip=true
-
       # ── 4. Run integration tests via Testcontainers ───────────
       #
       # CucumberIntegrationIT (picked up by maven-failsafe-plugin) will:
