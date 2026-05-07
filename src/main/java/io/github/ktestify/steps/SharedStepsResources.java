@@ -17,9 +17,7 @@ package io.github.ktestify.steps;
 
 import io.github.ktestify.config.KtestifyConfig;
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
-import io.github.ktestify.entities.KtestifyCftHost;
 import io.github.ktestify.entities.KtestifyNamespace;
-import io.github.ktestify.entities.KtestifyQueue;
 import io.github.ktestify.entities.KtestifySchema;
 import io.github.ktestify.manager.ObjectManager;
 import io.github.ktestify.models.Topic;
@@ -45,12 +43,6 @@ public class SharedStepsResources {
 
     /** Registry for Avro schemas. Keyed by schema name and/or alias. */
     public final ObjectManager<KtestifySchema> schemas = new ObjectManager<>();
-
-    /** Registry for IBM MQ queues. Keyed by queue name and/or alias. */
-    public final ObjectManager<KtestifyQueue> queues = new ObjectManager<>();
-
-    /** Registry for CFT hosts. Keyed by CFT alias. */
-    public final ObjectManager<KtestifyCftHost> cftHosts = new ObjectManager<>();
 
     /**
      * The assets base directory for the current scenario. Initialised from

@@ -17,12 +17,22 @@ package io.github.ktestify.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import io.cucumber.core.cli.Main;
 import io.github.ktestify.config.KtestifyConfig;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -52,7 +62,7 @@ import org.testcontainers.utility.DockerImageName;
  *
  * <p>The test is picked up by the Maven Failsafe plugin (suffix {@code IT}) during the {@code integration-test} phase.
  */
-class CucumberIntegrationIT {
+class CucumberIntegrationITTests {
 
     // ── Container images — keep in sync with KafkaTestExtension / SchemaRegistryTestExtension ──
     private static final DockerImageName KAFKA_IMAGE = DockerImageName.parse("apache/kafka:4.2.0");
@@ -60,6 +70,35 @@ class CucumberIntegrationIT {
             DockerImageName.parse("confluentinc/cp-schema-registry:7.9.0");
     private static final int SCHEMA_REGISTRY_PORT = 8081;
     private static final String KAFKA_NETWORK_ALIAS = "kafka";
+
+    // ── Topics required by all @integration scenarios ──────────────────────────────────────────
+    private static final List<String> INTEGRATION_TOPICS =
+            List.of("ktestify.raw-roundtrip", "ktestify.raw-batch", "ktestify.avro-orders", "ktestify.avro-roundtrip");
+
+    // ── Order Avro schema — mirrors docker/schemas/Order.avsc exactly ──────────────────────────
+    private static final String ORDER_AVRO_SCHEMA = """
+            {
+              "type": "record",
+              "name": "Order",
+              "namespace": "io.github.ktestify.sample",
+              "doc": "Sample order event for ktestify integration tests",
+              "fields": [
+                { "name": "orderId",   "type": "string",         "doc": "Unique order identifier" },
+                { "name": "amount",    "type": "double",          "doc": "Order total amount" },
+                { "name": "currency",  "type": "string",          "doc": "ISO 4217 currency code" },
+                { "name": "status",    "type": "string",          "doc": "Order status" },
+                { "name": "createdAt", "type": ["null", "long"],  "default": null,
+                  "doc": "Epoch millis — excluded from comparisons" }
+              ]
+            }
+            """;
+
+    // ── Schema Registry subjects to register (Order schema) ───────────────────────────────────
+    private static final List<String> ORDER_SCHEMA_SUBJECTS = List.of(
+            "Order-value", // schemaName = "Order" in DataTable
+            "ktestify.avro-orders-value", // TopicNameStrategy fallback for avro-orders
+            "ktestify.avro-roundtrip-value" // TopicNameStrategy fallback for avro-roundtrip
+            );
 
     // ── Shared containers (started once for the whole IT class) ────────────────────────────────
     private static Network network;
@@ -103,6 +142,13 @@ class CucumberIntegrationIT {
 
         // 4. Wire the dynamic container URLs into KtestifyConfig before any scenario runs
         wireConfig();
+
+        // 5. Create required Kafka topics and register Avro schemas
+        String bootstrapServers = kafkaContainer.getBootstrapServers();
+        String schemaRegistryUrl = "http://" + schemaRegistryContainer.getHost() + ":"
+                + schemaRegistryContainer.getMappedPort(SCHEMA_REGISTRY_PORT);
+        provisionTopics(bootstrapServers);
+        registerSchemas(schemaRegistryUrl);
     }
 
     @AfterAll
@@ -160,6 +206,81 @@ class CucumberIntegrationIT {
     // ─────────────────────────────────────────────────────────────────────────────────────────
     // Private helpers
     // ─────────────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Creates all Kafka topics required by the {@code @integration} Cucumber scenarios.
+     *
+     * <p>Uses the standard {@link AdminClient} API — single partition, replication factor 1 (single-broker container).
+     */
+    private static void provisionTopics(String bootstrapServers) {
+        try (AdminClient admin =
+                AdminClient.create(Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers))) {
+            List<NewTopic> newTopics = INTEGRATION_TOPICS.stream()
+                    .map(name -> new NewTopic(name, 1, (short) 1))
+                    .toList();
+            admin.createTopics(newTopics).all().get(30, TimeUnit.SECONDS);
+            System.out.printf(
+                    "[CucumberIntegrationIT] Created %d topics: %s%n", INTEGRATION_TOPICS.size(), INTEGRATION_TOPICS);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create Kafka topics for integration tests", e);
+        }
+    }
+
+    /**
+     * Registers the {@code Order} Avro schema in Schema Registry under all subjects needed by the Cucumber scenarios.
+     *
+     * <p>Uses the Schema Registry REST API directly (POST {@code /subjects/{subject}/versions}) so that this class has
+     * no compile-time dependency on the Confluent Schema Registry Java client. The schema JSON is serialised via
+     * Jackson (already a compile-time dependency of {@code ktestify-core}).
+     *
+     * <p>Subjects registered:
+     *
+     * <ul>
+     *   <li>{@code Order-value} — resolved when {@code schemaName = "Order"} is set in the DataTable
+     *   <li>{@code ktestify.avro-orders-value} — TopicNameStrategy fallback for the {@code avro-orders} topic
+     *   <li>{@code ktestify.avro-roundtrip-value} — TopicNameStrategy fallback for the {@code avro-roundtrip} topic
+     * </ul>
+     */
+    private static void registerSchemas(String schemaRegistryUrl) {
+        // Build the SR REST payload: {"schema": "<escaped-json-string>"}
+        String payload;
+        try {
+            payload = new ObjectMapper()
+                    .createObjectNode()
+                    .put("schema", ORDER_AVRO_SCHEMA)
+                    .toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to build schema registration payload", e);
+        }
+
+        HttpClient httpClient = HttpClient.newHttpClient();
+        for (String subject : ORDER_SCHEMA_SUBJECTS) {
+            try {
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(schemaRegistryUrl + "/subjects/" + subject + "/versions"))
+                        .header("Content-Type", "application/vnd.schemaregistry.v1+json")
+                        .POST(HttpRequest.BodyPublishers.ofString(payload))
+                        .build();
+
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+                if (response.statusCode() == 200 || response.statusCode() == 409) {
+                    // 200 = registered successfully, 409 = already exists — both are fine
+                    System.out.printf(
+                            "[CucumberIntegrationIT] Schema registered for subject '%s' (HTTP %d).%n",
+                            subject, response.statusCode());
+                } else {
+                    throw new RuntimeException(String.format(
+                            "Schema registration failed for subject '%s' — HTTP %d: %s",
+                            subject, response.statusCode(), response.body()));
+                }
+            } catch (RuntimeException re) {
+                throw re;
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to register schema for subject: " + subject, e);
+            }
+        }
+    }
 
     /**
      * Resets and reloads {@link KtestifyConfig} with the Testcontainer bootstrap/schema-registry URLs so that all

@@ -42,8 +42,7 @@ import org.apache.avro.generic.GenericRecord;
  * Orchestrates Kafka consumer validation for Cucumber step definitions.
  *
  * <p>Builds a typed {@link ConsumerContext}, submits the consumer to an {@link ExecutorService}, and applies a
- * two-layer timeout (inner: consumer poll; outer: executor guard with {@code BUFFER_TIME} ms extra — see §3.5 of
- * BASE_PROMPT).
+ * two-layer timeout (inner: consumer poll; outer: executor guard with {@code BUFFER_TIME} ms extra.
  *
  * <p>All delta-time conversions are handled here: DataTable {@code consumerDeltaTime} is in <b>seconds</b> → multiplied
  * by 1000 before setting {@link ConsumerContext#getConsumerDeltaTime()} which expects <b>milliseconds</b>.
@@ -270,6 +269,89 @@ public class ConsumerValidationService {
         execute(ctx, new RawKafkaConsumer(ctx), readTimeout);
     }
 
+    /**
+     * Validates that the key of a single raw record equals the expected key (KeyRecordMatcher).
+     *
+     * <p>Uses {@code expectedRecordKey} both as a KafkaRecordFetcher filter <em>and</em> as the assertion target.
+     *
+     * @param row DataTable row
+     * @param topic the resolved OUTPUT topic
+     */
+    public void validateRawKeyOnly(Map<String, String> row, Topic topic) {
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
+        Long readTimeout = getReadTimeoutMs(row);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
+
+        ConsumerContext<String, String> ctx = ConsumerContext.<String, String>builder()
+                .topic(topic)
+                .consumer(KafkaClientFactory.createRawConsumer())
+                .matchMethod(METHOD_RECORD_KEY_MATCH)
+                .expectedRecordKey(expectedKey)
+                .readTimeout(readTimeout)
+                .consumerDeltaTime(deltaTime)
+                .build();
+
+        io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
+                .matchMethod(METHOD_RECORD_KEY_MATCH)
+                .matchKey(expectedKey)
+                .strictMatching(false)
+                .build();
+
+        executeWithContext(
+                ctx,
+                new RawKafkaConsumer(ctx, new io.github.ktestify.match.impl.KeyRecordMatcher()) {
+                    @Override
+                    protected io.github.ktestify.match.MatchContext buildMatchContext() {
+                        return matchCtx;
+                    }
+                },
+                readTimeout);
+    }
+
+    /**
+     * Validates both the key and value of a single raw record (FileKeyRecordMatcher).
+     *
+     * <p>{@code expectedRecordKey} is used as the KafkaRecordFetcher key filter and also as the expected key assertion.
+     * {@code file} provides the expected value content.
+     *
+     * @param row DataTable row
+     * @param topic the resolved OUTPUT topic
+     * @param assets optional assets directory
+     */
+    public void validateRawKeyValue(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
+        String file = resolve(assets, getString(row, DATA_TABLE_FILE));
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
+        Long readTimeout = getReadTimeoutMs(row);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
+
+        ConsumerContext<String, String> ctx = ConsumerContext.<String, String>builder()
+                .topic(topic)
+                .consumer(KafkaClientFactory.createRawConsumer())
+                .matchMethod(METHOD_MATCH_KEY_FILE)
+                .matchFilePath(file)
+                .expectedRecordKey(expectedKey)
+                .readTimeout(readTimeout)
+                .consumerDeltaTime(deltaTime)
+                .build();
+
+        io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
+                .matchMethod(METHOD_MATCH_KEY_FILE)
+                .matchFilePath(file)
+                .matchKey(expectedKey)
+                .strictMatching(false)
+                .build();
+
+        executeWithContext(
+                ctx,
+                new RawKafkaConsumer(ctx, new io.github.ktestify.match.impl.FileKeyRecordMatcher()) {
+                    @Override
+                    protected io.github.ktestify.match.MatchContext buildMatchContext() {
+                        return matchCtx;
+                    }
+                },
+                readTimeout);
+    }
+
     // =========================================================================
     // Avro consumers
     // =========================================================================
@@ -365,6 +447,43 @@ public class ConsumerValidationService {
                 .build();
 
         execute(ctx, new AvroKafkaConsumer(ctx), readTimeout);
+    }
+
+    /**
+     * Validates that the key of a single Avro record equals the expected key (AvroKeyRecordMatcher).
+     *
+     * @param row DataTable row
+     * @param topic the resolved OUTPUT topic
+     */
+    public void validateAvroKeyOnly(Map<String, String> row, Topic topic) {
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
+        Long readTimeout = getReadTimeoutMs(row);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
+
+        ConsumerContext<String, GenericRecord> ctx = ConsumerContext.<String, GenericRecord>builder()
+                .topic(topic)
+                .consumer(KafkaClientFactory.createAvroConsumer())
+                .matchMethod(METHOD_RECORD_KEY_MATCH)
+                .expectedRecordKey(expectedKey)
+                .readTimeout(readTimeout)
+                .consumerDeltaTime(deltaTime)
+                .build();
+
+        io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
+                .matchMethod(METHOD_RECORD_KEY_MATCH)
+                .matchKey(expectedKey)
+                .strictMatching(false)
+                .build();
+
+        executeWithContext(
+                ctx,
+                new AvroKafkaConsumer(ctx, new io.github.ktestify.match.impl.AvroKeyRecordMatcher()) {
+                    @Override
+                    protected io.github.ktestify.match.MatchContext buildMatchContext() {
+                        return matchCtx;
+                    }
+                },
+                readTimeout);
     }
 
     // =========================================================================

@@ -407,7 +407,7 @@
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.10</minimum>
+                                            <minimum>0.70</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
@@ -767,7 +767,8 @@
                             <includes>
                                 <include>**/*IT.java</include>
                             </includes>
-                            <argLine>-Xmx2048m
+                            <argLine>@{argLine}
+                                -Xmx2048m
                                 -XX:+EnableDynamicAgentLoading</argLine>
                             <systemPropertyVariables>
                                 <!-- Cucumber tag filter: override with -Dcucumber.it.tags="@smoke" -->
