@@ -56,7 +56,7 @@ public final class DataTableUtils {
         if (rows.isEmpty()) {
             throw new IllegalArgumentException("DataTable has no data rows.");
         }
-        return rows.get(0);
+        return rows.getFirst();
     }
 
     /**

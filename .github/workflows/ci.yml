@@ -90,8 +90,10 @@ jobs:
           cache: maven
 
       # Testcontainers: disable Ryuk to avoid permission issues on GH runners
+      # -Pintegration-tests activates failsafe so unit + integration tests
+      # run in the same JVM pass and feed one combined JaCoCo report.
       - name: Build, run tests & enforce coverage (≥ 70 %)
-        run: mvn verify --no-transfer-progress -Dspotless.check.skip=true
+        run: mvn verify --no-transfer-progress -Pintegration-tests -Dspotless.check.skip=true
         env:
           TESTCONTAINERS_RYUK_DISABLED: "true"
 
@@ -116,13 +118,15 @@ jobs:
           path: target/jacoco.exec
           retention-days: 7
 
-      # Upload Surefire XML reports so GitHub can parse test results
-      - name: Upload Surefire reports
+      # Upload Surefire + Failsafe XML reports so GitHub can parse test results
+      - name: Upload Surefire & Failsafe reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: surefire-reports-${{ github.run_id }}
-          path: target/surefire-reports/
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
           retention-days: 7
 
       # ── Generate CI report ────────────────────────────────
@@ -149,26 +153,33 @@ jobs:
           #
           # Counting every <testcase> descendant recursively gives
           # the true total regardless of nesting depth.
+          # Failsafe reports are also included (integration tests run
+          # in the same job via -Pintegration-tests).
           total = failures = errors = skipped = 0
           failed_list = []
 
-          for path in sorted(glob.glob('target/surefire-reports/TEST-*.xml')):
-              try:
-                  root = ET.parse(path).getroot()
-                  suite_name = root.get('name', path)
+          report_globs = [
+              'target/surefire-reports/TEST-*.xml',
+              'target/failsafe-reports/TEST-*.xml',
+          ]
+          for pattern in report_globs:
+              for path in sorted(glob.glob(pattern)):
+                  try:
+                      root = ET.parse(path).getroot()
+                      suite_name = root.get('name', path)
 
-                  for tc in root.findall('.//testcase'):
-                      total += 1
-                      if tc.find('failure') is not None:
-                          failures += 1
-                          failed_list.append(f"{tc.get('classname', suite_name)}#{tc.get('name', '?')}")
-                      elif tc.find('error') is not None:
-                          errors += 1
-                          failed_list.append(f"{tc.get('classname', suite_name)}#{tc.get('name', '?')}")
-                      elif tc.find('skipped') is not None:
-                          skipped += 1
-              except Exception as e:
-                  print(f'Warning: could not parse {path}: {e}')
+                      for tc in root.findall('.//testcase'):
+                          total += 1
+                          if tc.find('failure') is not None:
+                              failures += 1
+                              failed_list.append(f"{tc.get('classname', suite_name)}#{tc.get('name', '?')}")
+                          elif tc.find('error') is not None:
+                              errors += 1
+                              failed_list.append(f"{tc.get('classname', suite_name)}#{tc.get('name', '?')}")
+                          elif tc.find('skipped') is not None:
+                              skipped += 1
+                  except Exception as e:
+                      print(f'Warning: could not parse {path}: {e}')
 
           passed   = total - failures - errors - skipped
           t_status = '✅' if failures + errors == 0 else '❌'

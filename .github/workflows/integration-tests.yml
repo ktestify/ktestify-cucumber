@@ -1,19 +1,13 @@
 # ============================================================
-# ============================================================
-# Integration Tests — Testcontainers + Cucumber @integration
+# Integration Tests — manual on-demand run
 #
-# Triggered on:
-#   - Manual dispatch (workflow_dispatch)   → any branch, optional tag filter
-#   - Push / PR to main (paths that affect integration behaviour)
+# NOTE: Integration tests are now also run automatically as part
+# of the CI workflow (ci.yml) via -Pintegration-tests, so every
+# push/PR gets combined unit + integration coverage.
 #
-# What it does:
-#   1. Builds ktestify-core (local install — no Maven Central needed)
-#   2. Runs `mvn verify -Pintegration-tests` on ktestify-cucumber
-#      → CucumberIntegrationIT starts Kafka + Schema Registry via
-#        Testcontainers, then runs all @integration Cucumber scenarios
-#        in-process via the Cucumber CLI
-#   3. Uploads the Cucumber JSON report as a run artefact
-#   4. Posts a sticky summary to the PR (if triggered by a PR)
+# This workflow remains available for manual dispatch when you
+# want to run integration tests in isolation (e.g. with a custom
+# tag filter) without triggering a full CI cycle.
 # ============================================================
 name: Integration Tests
 
@@ -24,20 +18,6 @@ on:
         description: "Cucumber tag filter (e.g. @integration, @xmlMatch)"
         required: false
         default: "@integration"
-  push:
-    branches: [ main ]
-    paths:
-      - "src/**"
-      - "pom.xml"
-      - "../ktestify-core/src/**"
-      - "../ktestify-core/pom.xml"
-  pull_request:
-    branches: [ main ]
-    paths:
-      - "src/**"
-      - "pom.xml"
-      - "../ktestify-core/src/**"
-      - "../ktestify-core/pom.xml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
