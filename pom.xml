@@ -61,7 +61,7 @@
         <commons-lang3.version>3.20.0</commons-lang3.version>
         <confluent.version>8.2.0</confluent.version>
         <cucumber.version>7.34.3</cucumber.version>
-        <cucumber-reportr.version>1.3.0-SNAPSHOT</cucumber-reportr.version>
+        <cucumber-reportr.version>1.3.0</cucumber-reportr.version>
         <gson.version>2.13.2</gson.version>
         <junit.jupiter.version>6.1.0-M1</junit.jupiter.version>
         <kafka.version>4.2.0</kafka.version>
@@ -93,6 +93,12 @@
         <spotless.plugin.version>3.4.0</spotless.plugin.version>
         <versions.plugin.version>2.21.0</versions.plugin.version>
         <central.publishing.plugin.version>0.10.0</central.publishing.plugin.version>
+
+        <!-- JIB -->
+        <jib.maven.plugin.version>3.4.4</jib.maven.plugin.version>
+        <!-- Target GHCR image — override with -Djib.image or set in CI -->
+        <jib.image>ghcr.io/ktestify/ktestify-cucumber</jib.image>
+        <jib.base.image>eclipse-temurin:25-jre-alpine</jib.base.image>
     </properties>
 
     <dependencies>
@@ -102,7 +108,7 @@
         <dependency>
             <groupId>io.github.ktestify</groupId>
             <artifactId>ktestify-core</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>0.1.0-rc1</version>
         </dependency>
 
         <!-- ===================================== -->
@@ -401,7 +407,7 @@
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.10</minimum>
+                                            <minimum>0.70</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
@@ -574,6 +580,115 @@
                 <artifactId>maven-deploy-plugin</artifactId>
                 <version>${maven.deploy.plugin.version}</version>
             </plugin>
+
+            <!-- ===================================== -->
+            <!-- JIB Plugin — container image build    -->
+            <!-- Usage:                                -->
+            <!--   Push to GHCR:                       -->
+            <!--     mvn jib:build                     -->
+            <!--   Local Docker daemon:                -->
+            <!--     mvn jib:dockerBuild               -->
+            <!--   Local tar archive:                  -->
+            <!--     mvn jib:buildTar                  -->
+            <!--                                       -->
+            <!-- Auth for GHCR (one of):               -->
+            <!--   1. ~/.m2/settings.xml server entry  -->
+            <!--      <server>                          -->
+            <!--        <id>ghcr.io</id>               -->
+            <!--        <username>GITHUB_ACTOR</username-->
+            <!--        <password>GITHUB_TOKEN</password-->
+            <!--      </server>                         -->
+            <!--   2. Env vars:                         -->
+            <!--      -Djib.to.auth.username=$ACTOR    -->
+            <!--      -Djib.to.auth.password=$TOKEN    -->
+            <!-- ===================================== -->
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>${jib.maven.plugin.version}</version>
+                <configuration>
+                    <from>
+                        <image>${jib.base.image}</image>
+                        <!-- Platforms — amd64 + arm64 (Apple Silicon / cloud ARM) -->
+                        <platforms>
+                            <platform>
+                                <os>linux</os>
+                                <architecture>amd64</architecture>
+                            </platform>
+                            <platform>
+                                <os>linux</os>
+                                <architecture>arm64</architecture>
+                            </platform>
+                        </platforms>
+                    </from>
+                    <to>
+                        <image>${jib.image}</image>
+                        <tags>
+                            <!-- Always tag with the exact Maven version -->
+                            <tag>${project.version}</tag>
+                            <!-- Also tag latest on every build -->
+                            <tag>latest</tag>
+                        </tags>
+                    </to>
+                    <container>
+                        <mainClass>io.github.ktestify.KtestifyMain</mainClass>
+                        <!-- JVM flags: tune for a short-lived CLI process -->
+                        <jvmFlags>
+                            <jvmFlag>-XX:+UseContainerSupport</jvmFlag>
+                            <jvmFlag>-XX:MaxRAMPercentage=75.0</jvmFlag>
+                            <jvmFlag>-XX:+ExitOnOutOfMemoryError</jvmFlag>
+                        </jvmFlags>
+                        <!--
+                            The test runner mounts external assets, features, and a HOCON
+                            config file at runtime.  Document the expected mount points here
+                            so Docker / Compose users know which paths to bind-mount.
+
+                            Mount                         Default inside container
+                            ─────────────────────────     ────────────────────────
+                            features dir        →  /workspace/features
+                            assets dir          →  /workspace/assets
+                            config file         →  /workspace/config/application.conf
+                                                   (set -Dconfig.file=/workspace/config/application.conf)
+                        -->
+                        <workingDirectory>/workspace</workingDirectory>
+                        <volumes>
+                            <volume>/workspace/features</volume>
+                            <volume>/workspace/assets</volume>
+                            <volume>/workspace/config</volume>
+                            <volume>/workspace/reports</volume>
+                            <!-- Third-party plugin JARs: drop *.jar files here at runtime -->
+                            <volume>/workspace/plugins</volume>
+                        </volumes>
+                        <environment>
+                            <!-- Sensible defaults — override at runtime via -e flags -->
+                            <KTESTIFY_FEATURES_PATH>/workspace/features</KTESTIFY_FEATURES_PATH>
+                            <KTESTIFY_ASSETS_DIR>/workspace/assets</KTESTIFY_ASSETS_DIR>
+                        </environment>
+                        <labels>
+                            <org.opencontainers.image.title>ktestify-cucumber</org.opencontainers.image.title>
+                            <org.opencontainers.image.description>Cucumber-Kafka integration test runner for ktestify</org.opencontainers.image.description>
+                            <org.opencontainers.image.url>https://github.com/ktestify/ktestify-cucumber</org.opencontainers.image.url>
+                            <org.opencontainers.image.source>https://github.com/ktestify/ktestify-cucumber</org.opencontainers.image.source>
+                            <org.opencontainers.image.vendor>ktestify</org.opencontainers.image.vendor>
+                            <org.opencontainers.image.licenses>Apache-2.0</org.opencontainers.image.licenses>
+                            <org.opencontainers.image.version>${project.version}</org.opencontainers.image.version>
+                        </labels>
+                        <!-- Reproducible builds — pin the creation timestamp -->
+                        <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
+                        <format>OCI</format>
+                    </container>
+                    <!-- Skip the extra source/javadoc JARs that Shade produces -->
+                    <extraDirectories>
+                        <paths>
+                            <!--
+                                If you need extra files (e.g. a default log4j2 config) inside
+                                the image, add them under src/main/jib/ — JIB merges that
+                                directory into the image root automatically.
+                            -->
+                        </paths>
+                    </extraDirectories>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
@@ -638,12 +753,30 @@
         <!-- Profile for integration tests -->
         <profile>
             <id>integration-tests</id>
+            <properties>
+                <!-- Default tag filter when -Dcucumber.it.tags is not supplied -->
+                <cucumber.it.tags>@integration</cucumber.it.tags>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <version>${maven.surefire.plugin.version}</version>
+                        <configuration>
+                            <includes>
+                                <include>**/*IT.java</include>
+                            </includes>
+                            <argLine>@{argLine}
+                                -Xmx2048m
+                                -XX:+EnableDynamicAgentLoading</argLine>
+                            <systemPropertyVariables>
+                                <!-- Cucumber tag filter: override with -Dcucumber.it.tags="@smoke" -->
+                                <cucumber.it.tags>${cucumber.it.tags}</cucumber.it.tags>
+                                <!-- Assets directory resolved to the absolute project path -->
+                                <ktestify.assets.dir>${project.basedir}/src/test/resources/data</ktestify.assets.dir>
+                            </systemPropertyVariables>
+                        </configuration>
                         <executions>
                             <execution>
                                 <goals>

@@ -13,7 +13,7 @@
 #   6. A GitHub Release is created with auto-generated notes.
 #
 # Required secrets (set in Settings → Secrets → Actions):
-#   GH_PAT              — PAT with `contents: write` (to push tags)
+#   GITHUB_TOKEN        — Built-in token (contents:write + packages:write set at job level)
 #   CENTRAL_USERNAME    — Maven Central Portal username token
 #   CENTRAL_PASSWORD    — Maven Central Portal password token
 #   GPG_PRIVATE_KEY     — ASCII-armored GPG private key
@@ -44,6 +44,8 @@ on:
 
 permissions:
   contents: write   # needed to push tags and create the GitHub Release
+  packages: write   # push Docker image to GHCR
+  id-token: write   # OIDC token for Maven Central trusted publishing
 
 env:
   JAVA_VERSION: "25"
@@ -57,14 +59,18 @@ jobs:
     environment: release    # ← configure approval & env secrets here
     permissions:
       contents: write       # push tag + create GitHub Release
+      packages: write       # push Docker image to GHCR
+      id-token: write       # OIDC token for Maven Central trusted publishing
 
     steps:
       # ── Checkout ──────────────────────────────────────────
       - name: Checkout (full history for tagging)
         uses: actions/checkout@v6   # v6: credentials stored in $RUNNER_TEMP
         with:
-          # Use a PAT so the push step can trigger downstream workflows
-          token: ${{ secrets.GH_PAT }}
+          # GITHUB_TOKEN has contents:write — sufficient to push tags.
+          # Note: pushes via GITHUB_TOKEN will NOT trigger other workflows.
+          # If downstream workflow triggers are needed, use a PAT secret instead.
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       # ── Java & Maven ──────────────────────────────────────
@@ -85,11 +91,12 @@ jobs:
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | \
             gpg --batch --import --no-tty
           # Trust the imported key at level 5 (ultimate)
-          KEY_ID=$(gpg --list-secret-keys --keyid-format LONG \
-                     --with-colons 2>/dev/null \
-                   | awk -F: '/^sec/{print $5; exit}')
-          echo "${KEY_ID}:6:" | gpg --import-ownertrust --batch --no-tty
-          echo "Imported key: ${KEY_ID}"
+          # Use the fpr record (field 10) — import-ownertrust requires the full
+          # 40-character fingerprint, not the 16-character key ID from sec/$5.
+          KEY_FPR=$(gpg --list-secret-keys --with-colons 2>/dev/null \
+                   | awk -F: '/^fpr/{print $10; exit}')
+          echo "${KEY_FPR}:6:" | gpg --import-ownertrust --batch --no-tty
+          echo "Imported key fingerprint: ${KEY_FPR}"
 
       # ── Set release version ───────────────────────────────
       - name: Set pom.xml to release version ${{ inputs.release-version }}
@@ -104,10 +111,10 @@ jobs:
         run: |
           mvn verify -P release \
             --no-transfer-progress \
-            -Dspotless.check.skip=true \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+            -Dspotless.check.skip=true
         env:
           TESTCONTAINERS_RYUK_DISABLED: "true"
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
       # ── Publish ───────────────────────────────────────────
       - name: Publish to Maven Central
@@ -116,11 +123,38 @@ jobs:
           mvn deploy -P release \
             --no-transfer-progress \
             -DskipTests \
-            -Dspotless.check.skip=true \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+            -Dspotless.check.skip=true
         env:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      # ── Publish Docker image to GHCR ─────────────────────
+      # Jib builds + pushes directly from the compiled classes —
+      # no local Docker daemon required.
+      # Tags pushed:
+      #   ghcr.io/ktestify/ktestify-cucumber:<release-version>
+      #   ghcr.io/ktestify/ktestify-cucumber:latest
+      - name: Publish Docker image to GHCR
+        if: inputs.dry-run == 'false'
+        run: |
+          mvn jib:build \
+            --no-transfer-progress \
+            -Dspotless.check.skip=true \
+            -Djib.to.auth.username=${{ github.actor }} \
+            -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }}
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Docker image summary
+        if: inputs.dry-run == 'false'
+        run: |
+          echo "### 🐳 Docker image published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | Image |" >> $GITHUB_STEP_SUMMARY
+          echo "|:----|:------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`${{ inputs.release-version }}\` | \`ghcr.io/ktestify/ktestify-cucumber:${{ inputs.release-version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`latest\` | \`ghcr.io/ktestify/ktestify-cucumber:latest\` |" >> $GITHUB_STEP_SUMMARY
 
       # ── Commit, tag & push ────────────────────────────────
       - name: Commit release version & tag
@@ -145,7 +179,7 @@ jobs:
         env:
           OUTPUT: RELEASE_NOTES.md
           GITHUB_REPO: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ── Update CHANGELOG.md with the new release ──────────
       - name: Update CHANGELOG.md (git-cliff full history)
@@ -157,7 +191,7 @@ jobs:
         env:
           OUTPUT: CHANGELOG.md
           GITHUB_REPO: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Bump to next SNAPSHOT ${{ inputs.next-snapshot-version }}
         if: inputs.dry-run == 'false'
@@ -185,6 +219,7 @@ jobs:
             target/ktestify-core-${{ inputs.release-version }}.jar
             target/ktestify-core-${{ inputs.release-version }}-sources.jar
             target/ktestify-core-${{ inputs.release-version }}-javadoc.jar
+            target/jib-image.digest
 
       # ── Dry-run summary ───────────────────────────────────
       - name: Generate dry-run changelog preview
@@ -196,7 +231,7 @@ jobs:
         env:
           OUTPUT: RELEASE_NOTES_DRYRUN.md
           GITHUB_REPO: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Dry-run summary
         if: inputs.dry-run == 'true'
@@ -204,7 +239,7 @@ jobs:
           echo "✅ Dry-run complete — artifacts were built & signed."
           echo "   Release version : ${{ inputs.release-version }}"
           echo "   Next SNAPSHOT   : ${{ inputs.next-snapshot-version }}"
-          echo "   Nothing was published, tagged, or pushed."
+          echo "   Nothing was published, tagged, pushed, or pushed to GHCR."
           echo ""
           echo "📋 Release notes preview:"
           cat RELEASE_NOTES_DRYRUN.md

@@ -1,24 +1,23 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Copyright 2026 Nil MALHOMME (malhomme.nil+oss@icloud.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.github.ktestify.services;
 
-import io.github.ktestify.constants.ConfigConstants;
+import static io.github.ktestify.match.RecordMatcherFactory.*;
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
+
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.exceptions.ConsumerException;
 import io.github.ktestify.io.kafka.ConsumerContext;
@@ -43,8 +42,7 @@ import org.apache.avro.generic.GenericRecord;
  * Orchestrates Kafka consumer validation for Cucumber step definitions.
  *
  * <p>Builds a typed {@link ConsumerContext}, submits the consumer to an {@link ExecutorService}, and applies a
- * two-layer timeout (inner: consumer poll; outer: executor guard with {@code BUFFER_TIME} ms extra — see §3.5 of
- * BASE_PROMPT).
+ * two-layer timeout (inner: consumer poll; outer: executor guard with {@code BUFFER_TIME} ms extra.
  *
  * <p>All delta-time conversions are handled here: DataTable {@code consumerDeltaTime} is in <b>seconds</b> → multiplied
  * by 1000 before setting {@link ConsumerContext#getConsumerDeltaTime()} which expects <b>milliseconds</b>.
@@ -56,7 +54,7 @@ import org.apache.avro.generic.GenericRecord;
 public class ConsumerValidationService {
 
     /** Extra buffer added on top of the read timeout for the outer executor guard (ms). */
-    private static final long BUFFER_TIME_MS = ConfigConstants.BUFFER_TIME;
+    private static final long BUFFER_TIME_MS = 5000;
 
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -73,15 +71,15 @@ public class ConsumerValidationService {
      */
     public void validateRawFromFile(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
 
-        String file = resolve(assets, getString(row, ConfigConstants.DATA_TABLE_FILE));
-        String expectedKey = getString(row, ConfigConstants.DATA_TABLE_EXPECTED_RECORD_KEY);
+        String file = resolve(assets, getString(row, DATA_TABLE_FILE));
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         Long readTimeout = getReadTimeoutMs(row);
-        Long deltaTime = getSecondsToMillis(row, ConfigConstants.DATA_TABLE_CONSUMER_DELTA_TIME);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
 
         ConsumerContext<String, String> ctx = ConsumerContext.<String, String>builder()
                 .topic(topic)
                 .consumer(KafkaClientFactory.createRawConsumer())
-                .matchMethod(ConfigConstants.METHOD_MATCH_FILE)
+                .matchMethod(METHOD_MATCH_FILE)
                 .matchFilePath(file)
                 .expectedRecordKey(expectedKey)
                 .readTimeout(readTimeout)
@@ -99,13 +97,13 @@ public class ConsumerValidationService {
      * @param assets optional assets directory
      */
     public void validateRawFields(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
-        String file = resolve(assets, getString(row, ConfigConstants.DATA_TABLE_FILE));
-        String expectedKey = getString(row, ConfigConstants.DATA_TABLE_EXPECTED_RECORD_KEY);
-        Integer line = getInt(row, ConfigConstants.DATA_TABLE_FIELD_TO_MATCH_LINE);
-        Integer from = getInt(row, ConfigConstants.DATA_TABLE_FIELD_TO_MATCH_FROM);
-        Integer to = getInt(row, ConfigConstants.DATA_TABLE_FIELD_TO_MATCH_TO);
+        String file = resolve(assets, getString(row, DATA_TABLE_FILE));
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
+        Integer line = getInt(row, DATA_TABLE_FIELD_TO_MATCH_LINE);
+        Integer from = getInt(row, DATA_TABLE_FIELD_TO_MATCH_FROM);
+        Integer to = getInt(row, DATA_TABLE_FIELD_TO_MATCH_TO);
         Long readTimeout = getReadTimeoutMs(row);
-        Long deltaTime = getSecondsToMillis(row, ConfigConstants.DATA_TABLE_CONSUMER_DELTA_TIME);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
 
         // Position descriptor encoded in matchKey as "line:from:to"
         String posDescriptor = line + ":" + from + ":" + to;
@@ -113,7 +111,7 @@ public class ConsumerValidationService {
         ConsumerContext<String, String> ctx = ConsumerContext.<String, String>builder()
                 .topic(topic)
                 .consumer(KafkaClientFactory.createRawConsumer())
-                .matchMethod(ConfigConstants.METHOD_FIELDS_TO_MATCH)
+                .matchMethod(METHOD_FIELDS_TO_MATCH)
                 .matchFilePath(file)
                 .expectedRecordKey(expectedKey)
                 .readTimeout(readTimeout)
@@ -122,7 +120,7 @@ public class ConsumerValidationService {
 
         // FieldsRecordMatcher reads posDescriptor via matchKey — inject via a custom consumer
         io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
-                .matchMethod(ConfigConstants.METHOD_FIELDS_TO_MATCH)
+                .matchMethod(METHOD_FIELDS_TO_MATCH)
                 .matchFilePath(file)
                 .matchKey(posDescriptor)
                 .strictMatching(false)
@@ -147,16 +145,16 @@ public class ConsumerValidationService {
      * @param assets optional assets directory
      */
     public void validateRawXml(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
-        String file = resolve(assets, getString(row, ConfigConstants.DATA_TABLE_FILE));
-        String expectedKey = getString(row, ConfigConstants.DATA_TABLE_EXPECTED_RECORD_KEY);
-        List<String> excluded = splitComma(getString(row, ConfigConstants.DATA_TABLE_FIELD_TO_MATCH_EXCLUDE_ELEMENTS));
+        String file = resolve(assets, getString(row, DATA_TABLE_FILE));
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
+        List<String> excluded = splitComma(getString(row, DATA_TABLE_FIELD_TO_MATCH_EXCLUDE_ELEMENTS));
         Long readTimeout = getReadTimeoutMs(row);
-        Long deltaTime = getSecondsToMillis(row, ConfigConstants.DATA_TABLE_CONSUMER_DELTA_TIME);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
 
         ConsumerContext<String, String> ctx = ConsumerContext.<String, String>builder()
                 .topic(topic)
                 .consumer(KafkaClientFactory.createRawConsumer())
-                .matchMethod(ConfigConstants.METHOD_MATCH_XML)
+                .matchMethod(METHOD_MATCH_XML)
                 .matchFilePath(file)
                 .expectedRecordKey(expectedKey)
                 .excludedFields(excluded)
@@ -175,16 +173,16 @@ public class ConsumerValidationService {
      * @param assets optional assets directory
      */
     public void validateRawXPath(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
-        String file = resolve(assets, getString(row, ConfigConstants.DATA_TABLE_FILE));
-        String expectedKey = getString(row, ConfigConstants.DATA_TABLE_EXPECTED_RECORD_KEY);
-        List<String> xpaths = splitComma(getString(row, ConfigConstants.DATA_TABLE_FIELD_TO_MATCH_XPATH));
+        String file = resolve(assets, getString(row, DATA_TABLE_FILE));
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
+        List<String> xpaths = splitComma(getString(row, DATA_TABLE_FIELD_TO_MATCH_XPATH));
         Long readTimeout = getReadTimeoutMs(row);
-        Long deltaTime = getSecondsToMillis(row, ConfigConstants.DATA_TABLE_CONSUMER_DELTA_TIME);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
 
         ConsumerContext<String, String> ctx = ConsumerContext.<String, String>builder()
                 .topic(topic)
                 .consumer(KafkaClientFactory.createRawConsumer())
-                .matchMethod(ConfigConstants.METHOD_MATCH_XPATH)
+                .matchMethod(METHOD_MATCH_XPATH)
                 .matchFilePath(file)
                 .expectedRecordKey(expectedKey)
                 .excludedFields(xpaths) // XPathRecordMatcher reads expressions from excludedFields
@@ -203,15 +201,15 @@ public class ConsumerValidationService {
      * @param assets optional assets directory
      */
     public void validateRawBatch(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
-        List<String> files = splitAndResolve(assets, getString(row, ConfigConstants.DATA_TABLE_FILES));
-        int expectedCount = Integer.parseInt(getString(row, ConfigConstants.DATA_TABLE_EXPECTED_RECORDS_COUNT));
+        List<String> files = splitAndResolve(assets, getString(row, DATA_TABLE_FILES));
+        int expectedCount = Integer.parseInt(getString(row, DATA_TABLE_EXPECTED_RECORDS_COUNT));
         Long readTimeout = getReadTimeoutMs(row);
-        Long deltaTime = getSecondsToMillis(row, ConfigConstants.DATA_TABLE_CONSUMER_DELTA_TIME);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
 
         ConsumerContext<String, String> ctx = ConsumerContext.<String, String>builder()
                 .topic(topic)
                 .consumer(KafkaClientFactory.createRawConsumer())
-                .matchMethod(ConfigConstants.METHOD_MATCH_FILE)
+                .matchMethod(METHOD_MATCH_FILE)
                 .matchFilePaths(files)
                 .isBatchConsumer(true)
                 .batchSize(expectedCount)
@@ -227,9 +225,9 @@ public class ConsumerValidationService {
      * {@link io.github.ktestify.match.impl.NoOpRecordMatcher} — if a record arrives the step fails; timeout means pass.
      */
     public void validateNoRecord(Map<String, String> row, Topic topic) {
-        String expectedKey = getString(row, ConfigConstants.DATA_TABLE_EXPECTED_RECORD_KEY);
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         Long readTimeout = getReadTimeoutMs(row);
-        Long deltaTime = getSecondsToMillis(row, ConfigConstants.DATA_TABLE_CONSUMER_DELTA_TIME);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
 
         ConsumerContext<String, String> ctx = ConsumerContext.<String, String>builder()
                 .topic(topic)
@@ -256,9 +254,9 @@ public class ConsumerValidationService {
 
     /** Validates that a record <em>does</em> appear (positive watcher). */
     public void validateRecordExists(Map<String, String> row, Topic topic) {
-        String expectedKey = getString(row, ConfigConstants.DATA_TABLE_EXPECTED_RECORD_KEY);
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         Long readTimeout = getReadTimeoutMs(row);
-        Long deltaTime = getSecondsToMillis(row, ConfigConstants.DATA_TABLE_CONSUMER_DELTA_TIME);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
 
         ConsumerContext<String, String> ctx = ConsumerContext.<String, String>builder()
                 .topic(topic)
@@ -269,6 +267,89 @@ public class ConsumerValidationService {
                 .build();
 
         execute(ctx, new RawKafkaConsumer(ctx), readTimeout);
+    }
+
+    /**
+     * Validates that the key of a single raw record equals the expected key (KeyRecordMatcher).
+     *
+     * <p>Uses {@code expectedRecordKey} both as a KafkaRecordFetcher filter <em>and</em> as the assertion target.
+     *
+     * @param row DataTable row
+     * @param topic the resolved OUTPUT topic
+     */
+    public void validateRawKeyOnly(Map<String, String> row, Topic topic) {
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
+        Long readTimeout = getReadTimeoutMs(row);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
+
+        ConsumerContext<String, String> ctx = ConsumerContext.<String, String>builder()
+                .topic(topic)
+                .consumer(KafkaClientFactory.createRawConsumer())
+                .matchMethod(METHOD_RECORD_KEY_MATCH)
+                .expectedRecordKey(expectedKey)
+                .readTimeout(readTimeout)
+                .consumerDeltaTime(deltaTime)
+                .build();
+
+        io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
+                .matchMethod(METHOD_RECORD_KEY_MATCH)
+                .matchKey(expectedKey)
+                .strictMatching(false)
+                .build();
+
+        executeWithContext(
+                ctx,
+                new RawKafkaConsumer(ctx, new io.github.ktestify.match.impl.KeyRecordMatcher()) {
+                    @Override
+                    protected io.github.ktestify.match.MatchContext buildMatchContext() {
+                        return matchCtx;
+                    }
+                },
+                readTimeout);
+    }
+
+    /**
+     * Validates both the key and value of a single raw record (FileKeyRecordMatcher).
+     *
+     * <p>{@code expectedRecordKey} is used as the KafkaRecordFetcher key filter and also as the expected key assertion.
+     * {@code file} provides the expected value content.
+     *
+     * @param row DataTable row
+     * @param topic the resolved OUTPUT topic
+     * @param assets optional assets directory
+     */
+    public void validateRawKeyValue(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
+        String file = resolve(assets, getString(row, DATA_TABLE_FILE));
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
+        Long readTimeout = getReadTimeoutMs(row);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
+
+        ConsumerContext<String, String> ctx = ConsumerContext.<String, String>builder()
+                .topic(topic)
+                .consumer(KafkaClientFactory.createRawConsumer())
+                .matchMethod(METHOD_MATCH_KEY_FILE)
+                .matchFilePath(file)
+                .expectedRecordKey(expectedKey)
+                .readTimeout(readTimeout)
+                .consumerDeltaTime(deltaTime)
+                .build();
+
+        io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
+                .matchMethod(METHOD_MATCH_KEY_FILE)
+                .matchFilePath(file)
+                .matchKey(expectedKey)
+                .strictMatching(false)
+                .build();
+
+        executeWithContext(
+                ctx,
+                new RawKafkaConsumer(ctx, new io.github.ktestify.match.impl.FileKeyRecordMatcher()) {
+                    @Override
+                    protected io.github.ktestify.match.MatchContext buildMatchContext() {
+                        return matchCtx;
+                    }
+                },
+                readTimeout);
     }
 
     // =========================================================================
@@ -283,15 +364,15 @@ public class ConsumerValidationService {
      * @param assets optional assets directory
      */
     public void validateAvroFromFile(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
-        String file = resolve(assets, getString(row, ConfigConstants.DATA_TABLE_FILE));
-        List<String> excluded = splitComma(getString(row, ConfigConstants.DATA_TABLE_FIELD_TO_MATCH_EXCLUDED_KEYS));
+        String file = resolve(assets, getString(row, DATA_TABLE_FILE));
+        List<String> excluded = splitComma(getString(row, DATA_TABLE_FIELD_TO_MATCH_EXCLUDED_KEYS));
         Long readTimeout = getReadTimeoutMs(row);
-        Long deltaTime = getSecondsToMillis(row, ConfigConstants.DATA_TABLE_CONSUMER_DELTA_TIME);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
 
         ConsumerContext<String, GenericRecord> ctx = ConsumerContext.<String, GenericRecord>builder()
                 .topic(topic)
                 .consumer(KafkaClientFactory.createAvroConsumer())
-                .matchMethod(ConfigConstants.METHOD_MATCH_FILE)
+                .matchMethod(METHOD_MATCH_FILE)
                 .matchFilePath(file)
                 .excludedFields(excluded)
                 .readTimeout(readTimeout)
@@ -308,21 +389,21 @@ public class ConsumerValidationService {
      * @param topic the resolved OUTPUT topic
      */
     public void validateAvroFieldValue(Map<String, String> row, Topic topic) {
-        String key = getString(row, ConfigConstants.DATA_TABLE_FIELD_TO_MATCH_KEY);
-        String value = getString(row, ConfigConstants.DATA_TABLE_FIELD_TO_MATCH_VALUE);
+        String key = getString(row, DATA_TABLE_FIELD_TO_MATCH_KEY);
+        String value = getString(row, DATA_TABLE_FIELD_TO_MATCH_VALUE);
         Long readTimeout = getReadTimeoutMs(row);
-        Long deltaTime = getSecondsToMillis(row, ConfigConstants.DATA_TABLE_CONSUMER_DELTA_TIME);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
 
         ConsumerContext<String, GenericRecord> ctx = ConsumerContext.<String, GenericRecord>builder()
                 .topic(topic)
                 .consumer(KafkaClientFactory.createAvroConsumer())
-                .matchMethod(ConfigConstants.METHOD_FIELDS_TO_MATCH)
+                .matchMethod(METHOD_FIELDS_TO_MATCH)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .build();
 
         io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
-                .matchMethod(ConfigConstants.METHOD_FIELDS_TO_MATCH)
+                .matchMethod(METHOD_FIELDS_TO_MATCH)
                 .matchKey(key)
                 .matchValue(value)
                 .strictMatching(false)
@@ -347,16 +428,16 @@ public class ConsumerValidationService {
      * @param assets optional assets directory
      */
     public void validateAvroBatch(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
-        List<String> files = splitAndResolve(assets, getString(row, ConfigConstants.DATA_TABLE_FILES));
-        int expectedCount = Integer.parseInt(getString(row, ConfigConstants.DATA_TABLE_EXPECTED_RECORDS_COUNT));
-        List<String> excluded = splitComma(getString(row, ConfigConstants.DATA_TABLE_FIELD_TO_MATCH_EXCLUDED_KEYS));
+        List<String> files = splitAndResolve(assets, getString(row, DATA_TABLE_FILES));
+        int expectedCount = Integer.parseInt(getString(row, DATA_TABLE_EXPECTED_RECORDS_COUNT));
+        List<String> excluded = splitComma(getString(row, DATA_TABLE_FIELD_TO_MATCH_EXCLUDED_KEYS));
         Long readTimeout = getReadTimeoutMs(row);
-        Long deltaTime = getSecondsToMillis(row, ConfigConstants.DATA_TABLE_CONSUMER_DELTA_TIME);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
 
         ConsumerContext<String, GenericRecord> ctx = ConsumerContext.<String, GenericRecord>builder()
                 .topic(topic)
                 .consumer(KafkaClientFactory.createAvroConsumer())
-                .matchMethod(ConfigConstants.METHOD_MATCH_FILE)
+                .matchMethod(METHOD_MATCH_FILE)
                 .matchFilePaths(files)
                 .excludedFields(excluded)
                 .isBatchConsumer(true)
@@ -366,6 +447,43 @@ public class ConsumerValidationService {
                 .build();
 
         execute(ctx, new AvroKafkaConsumer(ctx), readTimeout);
+    }
+
+    /**
+     * Validates that the key of a single Avro record equals the expected key (AvroKeyRecordMatcher).
+     *
+     * @param row DataTable row
+     * @param topic the resolved OUTPUT topic
+     */
+    public void validateAvroKeyOnly(Map<String, String> row, Topic topic) {
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
+        Long readTimeout = getReadTimeoutMs(row);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
+
+        ConsumerContext<String, GenericRecord> ctx = ConsumerContext.<String, GenericRecord>builder()
+                .topic(topic)
+                .consumer(KafkaClientFactory.createAvroConsumer())
+                .matchMethod(METHOD_RECORD_KEY_MATCH)
+                .expectedRecordKey(expectedKey)
+                .readTimeout(readTimeout)
+                .consumerDeltaTime(deltaTime)
+                .build();
+
+        io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
+                .matchMethod(METHOD_RECORD_KEY_MATCH)
+                .matchKey(expectedKey)
+                .strictMatching(false)
+                .build();
+
+        executeWithContext(
+                ctx,
+                new AvroKafkaConsumer(ctx, new io.github.ktestify.match.impl.AvroKeyRecordMatcher()) {
+                    @Override
+                    protected io.github.ktestify.match.MatchContext buildMatchContext() {
+                        return matchCtx;
+                    }
+                },
+                readTimeout);
     }
 
     // =========================================================================
@@ -434,7 +552,7 @@ public class ConsumerValidationService {
      * {@link ConsumerContext#getReadTimeout()} which expects ms.
      */
     private static Long getReadTimeoutMs(Map<String, String> row) {
-        return getSecondsToMillis(row, ConfigConstants.DATA_TABLE_READ_TIMEOUT);
+        return getSecondsToMillis(row, DATA_TABLE_READ_TIMEOUT);
     }
 
     private static List<String> splitComma(String value) {

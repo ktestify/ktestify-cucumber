@@ -20,7 +20,7 @@
 #   • SARIF results are uploaded to the GitHub Security tab and
 #     appear as inline PR annotations automatically.
 #
-# No secrets required — uses GH_TOKEN only.
+# No secrets required — uses secrets.GITHUB_TOKEN only.
 # ============================================================
 name: CodeQL
 

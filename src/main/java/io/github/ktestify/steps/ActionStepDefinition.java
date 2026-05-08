@@ -1,27 +1,25 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Copyright 2026 Nil MALHOMME (malhomme.nil+oss@icloud.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.github.ktestify.steps;
+
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
 
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.When;
-import io.github.ktestify.constants.ConfigConstants;
 import io.github.ktestify.io.kafka.KafkaRecordFetcher;
 import io.github.ktestify.models.Topic;
 import io.github.ktestify.script.ScriptService;
@@ -71,33 +69,6 @@ public class ActionStepDefinition {
     }
 
     // =========================================================================
-    // IBM MQ producer (stub — future implementation)
-    // =========================================================================
-
-    @When("queue record from file is sent")
-    public void whenQueueRecordFromFileIsSent(DataTable dataTable) {
-        Map<String, String> row = DataTableUtils.firstRow(dataTable);
-        String queueAlias = DataTableUtils.getString(row, ConfigConstants.DATA_TABLE_QUEUE_NAME);
-        // Resolve — may be name or alias
-        var queue = resources.queues.getOrThrow(queueAlias);
-        log.warn("IBM MQ producer not yet implemented. Queue: '{}'", queue.getQueueName());
-        throw new UnsupportedOperationException("IBM MQ producer is not yet implemented in this version.");
-    }
-
-    // =========================================================================
-    // CFT file transfer (stub — future implementation)
-    // =========================================================================
-
-    @When("file is sent using CFT")
-    public void whenFileIsSentUsingCft(DataTable dataTable) {
-        Map<String, String> row = DataTableUtils.firstRow(dataTable);
-        String alias = DataTableUtils.getString(row, ConfigConstants.DATA_TABLE_CFT_ALIAS);
-        var host = resources.cftHosts.getOrThrow(alias);
-        log.warn("CFT file transfer not yet implemented. Host: '{}'", host.getHost());
-        throw new UnsupportedOperationException("CFT file transfer is not yet implemented in this version.");
-    }
-
-    // =========================================================================
     // Wait
     // =========================================================================
 
@@ -140,8 +111,8 @@ public class ActionStepDefinition {
 
     private void executeScript(DataTable dataTable) throws IOException, InterruptedException {
         Map<String, String> row = DataTableUtils.firstRow(dataTable);
-        String scriptPath = DataTableUtils.getString(row, ConfigConstants.DATA_TABLE_SCRIPT_PATH);
-        String scriptArgs = DataTableUtils.getString(row, ConfigConstants.DATA_TABLE_SCRIPT_ARGS);
+        String scriptPath = DataTableUtils.getString(row, DATA_TABLE_SCRIPT_PATH);
+        String scriptArgs = DataTableUtils.getString(row, DATA_TABLE_SCRIPT_ARGS);
 
         int exitCode = scriptService.execute(scriptPath, scriptArgs);
         if (exitCode != 0) {
@@ -154,11 +125,11 @@ public class ActionStepDefinition {
      * {@code topicName} columns.
      */
     private Topic resolveTopic(Map<String, String> row) {
-        String alias = DataTableUtils.getString(row, ConfigConstants.DATA_TABLE_TOPIC_ALIAS);
+        String alias = DataTableUtils.getString(row, DATA_TABLE_TOPIC_ALIAS);
         if (alias != null && resources.topics.contains(alias)) {
             return resources.topics.getOrThrow(alias);
         }
-        String name = DataTableUtils.getString(row, ConfigConstants.DATA_TABLE_TOPIC_NAME);
+        String name = DataTableUtils.getString(row, DATA_TABLE_TOPIC_NAME);
         return resources.topics.getOrThrow(name);
     }
 }

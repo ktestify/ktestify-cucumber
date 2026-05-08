@@ -1,20 +1,17 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Copyright 2026 Nil MALHOMME (malhomme.nil+oss@icloud.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.github.ktestify.utils;
 
@@ -59,7 +56,7 @@ public final class DataTableUtils {
         if (rows.isEmpty()) {
             throw new IllegalArgumentException("DataTable has no data rows.");
         }
-        return rows.get(0);
+        return rows.getFirst();
     }
 
     /**
@@ -135,5 +132,54 @@ public final class DataTableUtils {
     /** Returns an {@link Optional} wrapping a String value from the first row. Useful for optional columns. */
     public static Optional<String> getOptional(DataTable dataTable, String column) {
         return Optional.ofNullable(getString(dataTable, column));
+    }
+
+    public static class Constants {
+        private Constants() {}
+
+        // Topic related
+        public static final String DATA_TABLE_TOPIC_NAME = "topicName";
+        public static final String DATA_TABLE_TOPIC_ALIAS = "topicAlias";
+        public static final String DATA_TABLE_FILE = "file";
+        public static final String DATA_TABLE_FILES = "files";
+        public static final String DATA_TABLE_NAMESPACE = "namespace";
+        public static final String DATA_TABLE_NAMESPACE_ALIAS = "namespaceAlias";
+        public static final String DATA_TABLE_RECORD_KEY = "recordKey";
+        public static final String DATA_TABLE_RECORDS_KEYS_VALUES = "recordsKeysValues";
+
+        public static final String DATA_TABLE_RECORD_KEY_VALUE = "recordKeyValue";
+        public static final String DATA_TABLE_READ_TIMEOUT = "consumerReadTimeout";
+        public static final String DATA_TABLE_TOPIC_TYPE = "topicType";
+
+        public static final String DATA_TABLE_EXPECTED_RECORD_KEY = "expectedRecordKey";
+        public static final String EXPECTED_RECORD_KEY = "expectedRecordKey";
+
+        public static final String DATA_TABLE_EXPECTED_RECORDS_COUNT = "expectedRecordsCount";
+        public static final String EXPECTED_RECORDS_COUNT = "expectedRecordsCount";
+
+        public static final String DATA_TABLE_CONSUMER_DELTA_TIME = "consumerDeltaTime";
+
+        // schema
+        public static final String DATA_TABLE_SCHEMA_NAME = "schemaName";
+        public static final String DATA_TABLE_SCHEMA_VERSION = "schemaVersion";
+        public static final String DATA_TABLE_SCHEMA_ALIAS = "schemaAlias";
+
+        // Field matcher
+
+        public static final String DATA_TABLE_FIELD_TO_MATCH_LINE = "line";
+        public static final String DATA_TABLE_FIELD_TO_MATCH_FROM = "from";
+        public static final String DATA_TABLE_FIELD_TO_MATCH_TO = "to";
+
+        public static final String DATA_TABLE_FIELD_TO_MATCH_KEY = "key";
+        public static final String DATA_TABLE_FIELD_TO_MATCH_VALUE = "value";
+
+        public static final String DATA_TABLE_FIELD_TO_MATCH_EXCLUDE_ELEMENTS = "excludedElements";
+
+        public static final String DATA_TABLE_FIELD_TO_MATCH_XPATH = "xpathExpressions";
+        public static final String DATA_TABLE_FIELD_TO_MATCH_EXCLUDED_KEYS = "excludedKeys";
+
+        // Script executions
+        public static final String DATA_TABLE_SCRIPT_PATH = "scriptPath";
+        public static final String DATA_TABLE_SCRIPT_ARGS = "scriptArgs";
     }
 }

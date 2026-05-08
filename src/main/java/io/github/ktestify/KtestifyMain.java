@@ -1,26 +1,25 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Copyright 2026 Nil MALHOMME (malhomme.nil+oss@icloud.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.github.ktestify;
 
 import io.cucumber.core.cli.Main;
 import io.github.ktestify.banner.KtestifyBanner;
 import io.github.ktestify.config.KtestifyConfig;
+import io.github.ktestify.plugin.PluginContext;
+import io.github.ktestify.plugin.PluginRegistry;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -98,19 +97,26 @@ public class KtestifyMain {
     static void main(String[] args) {
         KtestifyBanner.print();
         // ── 0. Wire external config file BEFORE the singleton loads ──────────
-        // Must happen first — KtestifyConfig is a lazy singleton; once loaded
-        // the config.file property has no effect.
         applyExternalConfigFile(args);
 
         // ── 1. Eagerly load and log effective config ──────────────────────────
         logEffectiveConfig();
 
-        // ── 2. Strip --config from args so Cucumber CLI doesn't see it ────────
-        String[] cucumberArgs = buildArgs(stripConfigArg(args));
+        // ── 2. Initialize plugin system ───────────────────────────────────────
+        PluginContext pluginCtx = KtestifyConfig::getOrLoad;
+        PluginRegistry pluginRegistry = initPlugins(pluginCtx);
+
+        // ── 3. Strip --config from args so Cucumber CLI doesn't see it ────────
+        List<String> pluginGlue = pluginRegistry.getGluePackages();
+        String[] cucumberArgs = buildArgs(stripConfigArg(args), pluginGlue);
         LOG.info("Starting ktestify-cucumber — effective args: {}", (Object) cucumberArgs);
 
         byte exitCode = Main.run(cucumberArgs, Thread.currentThread().getContextClassLoader());
         LOG.info("Cucumber finished with exit code {}", exitCode);
+
+        // ── 4. Shutdown plugins before exit ───────────────────────────────────
+        pluginRegistry.shutdown();
+
         System.exit(exitCode);
     }
 
@@ -120,13 +126,16 @@ public class KtestifyMain {
 
     /**
      * Builds the final argument array for the Cucumber CLI. If the caller supplies arguments they are used as-is (with
-     * glue injected if absent). Otherwise a fully defaulted set is built from env vars.
+     * glue injected if absent). Otherwise, a fully defaulted set is built from env vars.
+     *
+     * @param userArgs raw CLI args (with {@code --config} already stripped)
+     * @param pluginGlue glue packages contributed by loaded plugins
      */
-    static String[] buildArgs(String[] userArgs) {
+    static String[] buildArgs(String[] userArgs, List<String> pluginGlue) {
         if (userArgs != null && userArgs.length > 0) {
-            return ensureGlue(userArgs);
+            return ensureGlue(userArgs, pluginGlue);
         }
-        return buildDefaultArgs();
+        return buildDefaultArgs(pluginGlue);
     }
 
     // -------------------------------------------------------------------------
@@ -222,7 +231,7 @@ public class KtestifyMain {
         }
     }
 
-    private static String[] buildDefaultArgs() {
+    private static String[] buildDefaultArgs(List<String> pluginGlue) {
         String featuresPath = System.getenv(DEFAULT_FEATURES_ENV);
         if (featuresPath == null || featuresPath.isBlank()) {
             featuresPath = DEFAULT_FEATURES_PATH;
@@ -231,6 +240,13 @@ public class KtestifyMain {
         List<String> args = new ArrayList<>();
         args.add("--glue");
         args.add(DEFAULT_GLUE);
+
+        // Inject each plugin's glue package as a separate --glue argument
+        for (String glue : pluginGlue) {
+            args.add("--glue");
+            args.add(glue);
+            LOG.debug("Injecting plugin glue package: {}", glue);
+        }
 
         addReportingPlugins(args);
 
@@ -294,16 +310,45 @@ public class KtestifyMain {
         }
     }
 
-    /** Prepends {@code --glue io.github.ktestify} if not already present in the user args. */
-    private static String[] ensureGlue(String[] userArgs) {
-        for (String arg : userArgs) {
-            if (DEFAULT_GLUE.equals(arg)) {
-                return userArgs;
+    /** Prepends {@code --glue io.github.ktestify} and any plugin glue packages if not already present. */
+    private static String[] ensureGlue(String[] userArgs, List<String> pluginGlue) {
+        List<String> args = new ArrayList<>(List.of(userArgs));
+
+        // Check and prepend plugin glue (in reverse so insertion order is preserved at front)
+        List<String> toInject = new ArrayList<>();
+        for (String glue : pluginGlue) {
+            if (args.stream().noneMatch(a -> a.equals(glue))) {
+                toInject.add(glue);
             }
         }
-        List<String> args = new ArrayList<>(List.of(userArgs));
-        args.addFirst(DEFAULT_GLUE);
-        args.addFirst("--glue");
+        // Insert at front: --glue <pkg> for each missing plugin glue
+        for (int i = toInject.size() - 1; i >= 0; i--) {
+            args.addFirst(toInject.get(i));
+            args.addFirst("--glue");
+            LOG.debug("Injecting plugin glue package: {}", toInject.get(i));
+        }
+
+        // Ensure the core glue is present
+        if (args.stream().noneMatch(a -> a.equals(DEFAULT_GLUE))) {
+            args.addFirst(DEFAULT_GLUE);
+            args.addFirst("--glue");
+        }
         return args.toArray(String[]::new);
+    }
+
+    /**
+     * Initializes the plugin system, logging each discovery phase.
+     *
+     * @param ctx the plugin context wrapping the loaded config
+     * @return the fully initialized {@link PluginRegistry}
+     */
+    private static PluginRegistry initPlugins(PluginContext ctx) {
+        try {
+            return PluginRegistry.load(ctx);
+        } catch (Exception e) {
+            LOG.error("Fatal: plugin system failed to initialize — {}", e.getMessage(), e);
+            System.exit(2);
+            throw new IllegalStateException("unreachable");
+        }
     }
 }
