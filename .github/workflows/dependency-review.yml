@@ -6,7 +6,7 @@
 #   • dependencies with known CVEs (severity ≥ moderate)
 #   • dependencies under non-permissive licences
 #
-# No secrets required — uses GH_TOKEN automatically.
+# No secrets required — uses secrets.GITHUB_TOKEN automatically.
 # ============================================================
 name: Dependency Review
 

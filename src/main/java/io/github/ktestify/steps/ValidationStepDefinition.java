@@ -134,39 +134,6 @@ public class ValidationStepDefinition {
     }
 
     // =========================================================================
-    // Raw — key-only assertion (KeyRecordMatcher)
-    // =========================================================================
-
-    @Then("expected record key matches")
-    public void thenExpectedRecordKeyMatches(DataTable dataTable) {
-        Map<String, String> row = DataTableUtils.firstRow(dataTable);
-        Topic topic = resolveTopic(row);
-        consumerService.validateRawKeyOnly(row, topic);
-    }
-
-    // =========================================================================
-    // Raw — key + value file assertion (FileKeyRecordMatcher)
-    // =========================================================================
-
-    @Then("expected record key and value match from file")
-    public void thenExpectedRecordKeyAndValueMatchFromFile(DataTable dataTable) {
-        Map<String, String> row = DataTableUtils.firstRow(dataTable);
-        Topic topic = resolveTopic(row);
-        consumerService.validateRawKeyValue(row, topic, resources.assetsDirectory);
-    }
-
-    // =========================================================================
-    // Avro — key-only assertion (AvroKeyRecordMatcher)
-    // =========================================================================
-
-    @Then("expected Avro record key matches")
-    public void thenExpectedAvroRecordKeyMatches(DataTable dataTable) {
-        Map<String, String> row = DataTableUtils.firstRow(dataTable);
-        Topic topic = resolveTopic(row);
-        consumerService.validateAvroKeyOnly(row, topic);
-    }
-
-    // =========================================================================
     // Watcher — negative assertion (record must NOT appear)
     // =========================================================================
 
