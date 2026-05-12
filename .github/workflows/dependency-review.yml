@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v6   # v6: credentials stored in $RUNNER_TEMP
 
       - name: Dependency Review
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
         with:
           # Fail the check for any vulnerability rated moderate or above
           fail-on-severity: moderate
