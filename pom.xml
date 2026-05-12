@@ -95,7 +95,7 @@
         <central.publishing.plugin.version>0.10.0</central.publishing.plugin.version>
 
         <!-- JIB -->
-        <jib.maven.plugin.version>3.4.4</jib.maven.plugin.version>
+        <jib.maven.plugin.version>3.5.1</jib.maven.plugin.version>
         <!-- Target GHCR image — override with -Djib.image or set in CI -->
         <jib.image>ghcr.io/ktestify/ktestify-cucumber</jib.image>
         <jib.base.image>eclipse-temurin:25-jre-alpine</jib.base.image>
