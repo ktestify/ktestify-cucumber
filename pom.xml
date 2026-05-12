@@ -65,7 +65,7 @@
         <gson.version>2.13.2</gson.version>
         <junit.jupiter.version>6.1.0-RC1</junit.jupiter.version>
         <kafka.version>4.2.0</kafka.version>
-        <lombok.version>1.18.44</lombok.version>
+        <lombok.version>1.18.46</lombok.version>
         <mockito.version>5.23.0</mockito.version>
         <jackson.version>2.19.2</jackson.version>
         <log4j2.version>2.25.4</log4j2.version>
