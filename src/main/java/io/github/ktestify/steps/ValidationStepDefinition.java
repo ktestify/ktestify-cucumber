@@ -1,27 +1,26 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Copyright 2026 Nil MALHOMME (malhomme.nil+oss@icloud.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.github.ktestify.steps;
+
+import static io.github.ktestify.utils.DataTableUtils.Constants.DATA_TABLE_TOPIC_ALIAS;
+import static io.github.ktestify.utils.DataTableUtils.Constants.DATA_TABLE_TOPIC_NAME;
 
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Then;
-import io.github.ktestify.constants.ConfigConstants;
 import io.github.ktestify.models.Topic;
 import io.github.ktestify.services.ConsumerValidationService;
 import io.github.ktestify.utils.DataTableUtils;
@@ -135,16 +134,36 @@ public class ValidationStepDefinition {
     }
 
     // =========================================================================
-    // IBM MQ queue validation (stub — future implementation)
+    // Raw — key-only assertion (KeyRecordMatcher)
     // =========================================================================
 
-    @Then("expected queue record from file")
-    public void thenExpectedQueueRecordFromFile(DataTable dataTable) {
+    @Then("expected record key matches")
+    public void thenExpectedRecordKeyMatches(DataTable dataTable) {
         Map<String, String> row = DataTableUtils.firstRow(dataTable);
-        String queueAlias = DataTableUtils.getString(row, ConfigConstants.DATA_TABLE_QUEUE_ALIAS);
-        var queue = resources.queues.getOrThrow(queueAlias);
-        log.warn("IBM MQ consumer not yet implemented. Queue: '{}'", queue.getQueueName());
-        throw new UnsupportedOperationException("IBM MQ consumer is not yet implemented in this version.");
+        Topic topic = resolveTopic(row);
+        consumerService.validateRawKeyOnly(row, topic);
+    }
+
+    // =========================================================================
+    // Raw — key + value file assertion (FileKeyRecordMatcher)
+    // =========================================================================
+
+    @Then("expected record key and value match from file")
+    public void thenExpectedRecordKeyAndValueMatchFromFile(DataTable dataTable) {
+        Map<String, String> row = DataTableUtils.firstRow(dataTable);
+        Topic topic = resolveTopic(row);
+        consumerService.validateRawKeyValue(row, topic, resources.assetsDirectory);
+    }
+
+    // =========================================================================
+    // Avro — key-only assertion (AvroKeyRecordMatcher)
+    // =========================================================================
+
+    @Then("expected Avro record key matches")
+    public void thenExpectedAvroRecordKeyMatches(DataTable dataTable) {
+        Map<String, String> row = DataTableUtils.firstRow(dataTable);
+        Topic topic = resolveTopic(row);
+        consumerService.validateAvroKeyOnly(row, topic);
     }
 
     // =========================================================================
@@ -178,11 +197,11 @@ public class ValidationStepDefinition {
      * not found.
      */
     private Topic resolveTopic(Map<String, String> row) {
-        String alias = DataTableUtils.getString(row, ConfigConstants.DATA_TABLE_TOPIC_ALIAS);
+        String alias = DataTableUtils.getString(row, DATA_TABLE_TOPIC_ALIAS);
         if (alias != null && resources.topics.contains(alias)) {
             return resources.topics.getOrThrow(alias);
         }
-        String name = DataTableUtils.getString(row, ConfigConstants.DATA_TABLE_TOPIC_NAME);
+        String name = DataTableUtils.getString(row, DATA_TABLE_TOPIC_NAME);
         return resources.topics.getOrThrow(name);
     }
 
