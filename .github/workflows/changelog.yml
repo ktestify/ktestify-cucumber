@@ -27,6 +27,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 # ──────────────────────────────────────────────────────────────
 jobs:
@@ -38,6 +39,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write     # needed to commit CHANGELOG.md back to main
+      pull-requests: read  # Add this for fetching PR metadata
 
     steps:
       - name: Checkout (full history for cliff)
@@ -50,8 +52,6 @@ jobs:
         uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
-          # Regenerate the full changelog from all tags
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         env:
           OUTPUT: CHANGELOG.md
           GITHUB_REPO: ${{ github.repository }}
@@ -169,5 +169,3 @@ jobs:
               });
               console.log('✅ Created changelog preview comment');
             }
-
-
