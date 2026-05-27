@@ -1,5 +1,5 @@
 # ============================================================
-# Release — Publish to Maven Central
+# Release — Publish to Maven Central + GHCR
 #
 # Workflow:
 #   1. Developer triggers this workflow manually and provides:
@@ -9,11 +9,12 @@
 #   3. Full build runs with the `release` Maven profile
 #      (GPG signing + central-publishing-maven-plugin).
 #   4. Artifact is published to Maven Central.
-#   5. Git is tagged and pom.xml is bumped to next SNAPSHOT.
-#   6. A GitHub Release is created with auto-generated notes.
+#   5. Docker image is built & pushed to GHCR via JIB.
+#   6. Git is tagged and pom.xml is bumped to next SNAPSHOT.
+#   7. A GitHub Release is created with auto-generated notes.
 #
 # Required secrets (set in Settings → Secrets → Actions):
-#   GITHUB_TOKEN        — Built-in token (contents:write + packages:write set at job level)
+#   GITHUB_TOKEN        — Built-in token (contents:write + packages:write + id-token:write set at job level)
 #   CENTRAL_USERNAME    — Maven Central Portal username token
 #   CENTRAL_PASSWORD    — Maven Central Portal password token
 #   GPG_PRIVATE_KEY     — ASCII-armored GPG private key
@@ -23,7 +24,6 @@
 # mandatory approval gate can be configured there.
 # ============================================================
 name: Release
-
 on:
   workflow_dispatch:
     inputs:
@@ -41,38 +41,41 @@ on:
         default: "false"
         type: choice
         options: [ "false", "true" ]
-
-permissions:
-  contents: write   # needed to push tags and create the GitHub Release
-  packages: write   # push Docker image to GHCR
-  id-token: write   # OIDC token for Maven Central trusted publishing
-
 env:
   JAVA_VERSION: "25"
   MAVEN_OPTS: "-Xmx2048m -XX:+EnableDynamicAgentLoading"
-
 # ──────────────────────────────────────────────────────────────
 jobs:
   release:
     name: 🚀 Release ${{ inputs.release-version }}
     runs-on: ubuntu-latest
-    environment: release    # ← configure approval & env secrets here
+    environment: release
     permissions:
       contents: write       # push tag + create GitHub Release
       packages: write       # push Docker image to GHCR
       id-token: write       # OIDC token for Maven Central trusted publishing
-
+      pull-requests: read   # git-cliff: fetch PR metadata for changelog
     steps:
+      # ── Input validation ──────────────────────────────────
+      - name: Validate version inputs
+        run: |
+          if [[ ! "${{ inputs.release-version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: release-version must be X.Y.Z with no 'v' prefix and no '-SNAPSHOT'."
+            echo "       Got: '${{ inputs.release-version }}'"
+            exit 1
+          fi
+          if [[ ! "${{ inputs.next-snapshot-version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$ ]]; then
+            echo "ERROR: next-snapshot-version must be X.Y.Z-SNAPSHOT."
+            echo "       Got: '${{ inputs.next-snapshot-version }}'"
+            exit 1
+          fi
+          echo "Versions validated: ${{ inputs.release-version }} → ${{ inputs.next-snapshot-version }}"
       # ── Checkout ──────────────────────────────────────────
       - name: Checkout (full history for tagging)
-        uses: actions/checkout@v6   # v6: credentials stored in $RUNNER_TEMP
+        uses: actions/checkout@v6
         with:
-          # GITHUB_TOKEN has contents:write — sufficient to push tags.
-          # Note: pushes via GITHUB_TOKEN will NOT trigger other workflows.
-          # If downstream workflow triggers are needed, use a PAT secret instead.
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-
       # ── Java & Maven ──────────────────────────────────────
       - name: Set up Java ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v5
@@ -80,24 +83,18 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
           cache: maven
-          # Inject Maven Central credentials into ~/.m2/settings.xml
           server-id: central
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
-
       # ── GPG ───────────────────────────────────────────────
       - name: Import GPG signing key
         run: |
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | \
             gpg --batch --import --no-tty
-          # Trust the imported key at level 5 (ultimate)
-          # Use the fpr record (field 10) — import-ownertrust requires the full
-          # 40-character fingerprint, not the 16-character key ID from sec/$5.
           KEY_FPR=$(gpg --list-secret-keys --with-colons 2>/dev/null \
                    | awk -F: '/^fpr/{print $10; exit}')
           echo "${KEY_FPR}:6:" | gpg --import-ownertrust --batch --no-tty
           echo "Imported key fingerprint: ${KEY_FPR}"
-
       # ── Set release version ───────────────────────────────
       - name: Set pom.xml to release version ${{ inputs.release-version }}
         run: |
@@ -105,7 +102,6 @@ jobs:
             -DnewVersion=${{ inputs.release-version }} \
             --no-transfer-progress
           mvn versions:commit --no-transfer-progress
-
       # ── Build, test & sign ────────────────────────────────
       - name: Build with release profile (compile + test + GPG sign)
         run: |
@@ -115,8 +111,7 @@ jobs:
         env:
           TESTCONTAINERS_RYUK_DISABLED: "true"
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-
-      # ── Publish ───────────────────────────────────────────
+      # ── Publish to Maven Central ──────────────────────────
       - name: Publish to Maven Central
         if: inputs.dry-run == 'false'
         run: |
@@ -128,9 +123,8 @@ jobs:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-
       # ── Publish Docker image to GHCR ─────────────────────
-      # Jib builds + pushes directly from the compiled classes —
+      # JIB builds + pushes directly from the compiled classes —
       # no local Docker daemon required.
       # Tags pushed:
       #   ghcr.io/ktestify/ktestify-cucumber:<release-version>
@@ -145,19 +139,19 @@ jobs:
             -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }}
         env:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-
       - name: Docker image summary
         if: inputs.dry-run == 'false'
         run: |
-          echo "### 🐳 Docker image published" >> $GITHUB_STEP_SUMMARY
+          echo "### Docker image published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Tag | Image |" >> $GITHUB_STEP_SUMMARY
           echo "|:----|:------|" >> $GITHUB_STEP_SUMMARY
-          echo "| \`${{ inputs.release-version }}\` | \`ghcr.io/ktestify/ktestify-cucumber:${{ inputs.release-version }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| \`latest\` | \`ghcr.io/ktestify/ktestify-cucumber:latest\` |" >> $GITHUB_STEP_SUMMARY
-
+          echo "| ${{ inputs.release-version }} | ghcr.io/ktestify/ktestify-cucumber:${{ inputs.release-version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| latest | ghcr.io/ktestify/ktestify-cucumber:latest |" >> $GITHUB_STEP_SUMMARY
       # ── Commit, tag & push ────────────────────────────────
-      - name: Commit release version & tag
+      # Push IMMEDIATELY after tagging so the new commit SHA exists on GitHub
+      # before git-cliff calls the GitHub API in the next step.
+      - name: Commit release version, tag & push
         if: inputs.dry-run == 'false'
         run: |
           git config user.name  "github-actions[bot]"
@@ -166,21 +160,18 @@ jobs:
           git commit -m "chore(release): prepare release ${{ inputs.release-version }} [skip ci]"
           git tag -a "v${{ inputs.release-version }}" \
             -m "Release ${{ inputs.release-version }}"
-
+          git push origin main --follow-tags
       # ── Generate release notes with git-cliff ─────────────
-      # Runs after the tag is created so cliff knows the version boundary.
       - name: Generate release notes (git-cliff)
         if: inputs.dry-run == 'false'
         uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
-          # Only commits since the previous tag → this release's notes
           args: --verbose --latest --strip header
         env:
           OUTPUT: RELEASE_NOTES.md
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       # ── Update CHANGELOG.md with the new release ──────────
       - name: Update CHANGELOG.md (git-cliff full history)
         if: inputs.dry-run == 'false'
@@ -192,7 +183,6 @@ jobs:
           OUTPUT: CHANGELOG.md
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Bump to next SNAPSHOT ${{ inputs.next-snapshot-version }}
         if: inputs.dry-run == 'false'
         run: |
@@ -202,25 +192,41 @@ jobs:
           mvn versions:commit --no-transfer-progress
           git add pom.xml CHANGELOG.md
           git commit -m "chore(release): prepare next iteration ${{ inputs.next-snapshot-version }} [skip ci]"
-          git push origin main --follow-tags
-
+          git push origin main
       # ── GitHub Release ────────────────────────────────────
+      # File names are fixed (no version suffix) because pom.xml sets
+      # project.build.finalName = ktestify-cucumber.
       - name: Create GitHub Release
         if: inputs.dry-run == 'false'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ inputs.release-version }}
-          name: "ktestify ${{ inputs.release-version }}"
-          # Use the git-cliff generated notes (not GitHub's auto-generated ones)
+          name: "ktestify-cucumber ${{ inputs.release-version }}"
           body_path: RELEASE_NOTES.md
           draft: false
           prerelease: false
           files: |
-            target/ktestify-core-${{ inputs.release-version }}.jar
-            target/ktestify-core-${{ inputs.release-version }}-sources.jar
-            target/ktestify-core-${{ inputs.release-version }}-javadoc.jar
+            target/ktestify-cucumber.jar
+            target/ktestify-cucumber-sources.jar
+            target/ktestify-cucumber-javadoc.jar
             target/jib-image.digest
-
+      # ── Rollback on failure ────────────────────────────────
+      # Runs only when a previous step has failed AND this is not a dry-run.
+      - name: Rollback on failure
+        if: failure() && inputs.dry-run == 'false'
+        run: |
+          echo "A release step failed — attempting rollback..."
+          TAG="v${{ inputs.release-version }}"
+          if git ls-remote --tags origin "$TAG" | grep -q "$TAG"; then
+            git push origin --delete "$TAG" \
+              && echo "Deleted remote tag $TAG" \
+              || echo "Warning: could not delete remote tag $TAG — delete it manually."
+          fi
+          git tag -d "$TAG" 2>/dev/null && echo "Deleted local tag $TAG" || true
+          git checkout HEAD -- pom.xml CHANGELOG.md 2>/dev/null || true
+          echo ""
+          echo "Rollback complete."
+          echo "Review the failure above, fix the root cause, then re-trigger the workflow."
       # ── Dry-run summary ───────────────────────────────────
       - name: Generate dry-run changelog preview
         if: inputs.dry-run == 'true'
@@ -232,17 +238,13 @@ jobs:
           OUTPUT: RELEASE_NOTES_DRYRUN.md
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Dry-run summary
         if: inputs.dry-run == 'true'
         run: |
-          echo "✅ Dry-run complete — artifacts were built & signed."
-          echo "   Release version : ${{ inputs.release-version }}"
-          echo "   Next SNAPSHOT   : ${{ inputs.next-snapshot-version }}"
-          echo "   Nothing was published, tagged, pushed, or pushed to GHCR."
+          echo "Dry-run complete — artifacts were built and signed."
+          echo "Release version : ${{ inputs.release-version }}"
+          echo "Next SNAPSHOT   : ${{ inputs.next-snapshot-version }}"
+          echo "Nothing was published, tagged, pushed, or pushed to GHCR."
           echo ""
-          echo "📋 Release notes preview:"
+          echo "Release notes preview:"
           cat RELEASE_NOTES_DRYRUN.md
-
-
-

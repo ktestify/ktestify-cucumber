@@ -6,7 +6,7 @@
 # Token is supplied at runtime via the GITHUB_TOKEN env variable.
 [remote.github]
 owner = "ktestify"
-repo  = "ktestify-core"
+repo  = "ktestify-cucumber"
 
 # ── Changelog layout ──────────────────────────────────────────────────────────
 [changelog]
@@ -29,14 +29,14 @@ body = """
 {{ commit.message | split(pat="\n") | first | upper_first | trim }}\
 {% if commit.scope %} *({{ commit.scope }})*{% endif %}\
 {% if commit.remote.username %} — [@{{ commit.remote.username }}](https://github.com/{{ commit.remote.username }}){% endif %}\
-{% if commit.remote.pr_number %} ([#{{ commit.remote.pr_number }}](https://github.com/ktestify/ktestify-corepull/{{ commit.remote.pr_number }})){% endif %}
+{% if commit.remote.pr_number %} ([#{{ commit.remote.pr_number }}](https://github.com/ktestify/ktestify-cucumber/pull/{{ commit.remote.pr_number }})){% endif %}
 {% endfor %}
 {% endfor %}\
 {% if github.contributors | filter(attribute="is_first_time", value=true) | length != 0 %}
 ### 🎉 New Contributors
 {% for contributor in github.contributors | filter(attribute="is_first_time", value=true) %}
 {% if contributor.pr_number %}- @{{ contributor.username }} made their first contribution \
-in [#{{ contributor.pr_number }}](https://github.com/ktestify/ktestify-corepull/{{ contributor.pr_number }})
+in [#{{ contributor.pr_number }}](https://github.com/ktestify/ktestify-cucumber/pull/{{ contributor.pr_number }})
 {% endif %}
 {%- endfor %}
 {% endif %}\n
@@ -96,7 +96,7 @@ sort_commits             = "oldest"
 
 link_parsers = [
     # Auto-link #123 → GitHub issue
-    { pattern = "#(\\d+)", href = "https://github.com/ktestify/ktestify-coreissues/$1" },
+    { pattern = "#(\\d+)", href = "https://github.com/ktestify/ktestify-cucumber/issues/$1" },
 ]
 
 # ── Automatic version bumping ─────────────────────────────────────────────────
