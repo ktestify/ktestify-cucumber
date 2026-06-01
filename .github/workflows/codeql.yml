@@ -1,137 +1,101 @@
-# ============================================================
-# CodeQL — Static Analysis & Security Scanning
+# For most projects, this workflow file will not need changing; you simply need
+# to commit it to your repository.
 #
-# Replaces SonarCloud. Uses GitHub's native CodeQL engine.
+# You may wish to alter this file to override the set of languages analyzed,
+# or to provide custom queries or build logic.
 #
-# Triggers:
-#   • push  → main        (every merge)
-#   • pull_request → main (every PR, with inline PR annotations)
-#   • schedule weekly     (Sunday 02:00 UTC — catches supply-chain
-#                          issues not triggered by code changes)
+# ******** NOTE ********
+# We have attempted to detect the languages in your repository. Please check
+# the `language` matrix defined below to confirm you have the correct set of
+# supported CodeQL languages.
 #
-# Key design choices (from Context7 / CodeQL 3.0 docs):
-#   • build-mode: none   → GA since CodeQL 3.0; analyses Java
-#                          source WITHOUT running Maven or Docker.
-#                          No Testcontainers, no GPG, no build time.
-#   • security-extended  → Extended query suite — more CVE patterns
-#                          than the default "code-scanning" suite.
-#   • java-kotlin        → Current recommended language specifier
-#                          for Java (and Kotlin) projects.
-#   • SARIF results are uploaded to the GitHub Security tab and
-#     appear as inline PR annotations automatically.
-#
-# No secrets required — uses secrets.GITHUB_TOKEN only.
-# ============================================================
-name: CodeQL
+name: "CodeQL Advanced"
 
 on:
   push:
-    branches: [ main ]
-    paths-ignore:
-      - "**.md"
-      - "LICENSE"
-      - ".github/ISSUE_TEMPLATE/**"
-      - ".github/pull_request_template.md"
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
-    paths-ignore:
-      - "**.md"
-      - "LICENSE"
-      - ".github/ISSUE_TEMPLATE/**"
-      - ".github/pull_request_template.md"
+    branches: [ "main" ]
   schedule:
-    # Weekly full scan — Sunday 02:00 UTC
-    # Catches newly-disclosed CVEs even without code changes
-    - cron: "0 2 * * 0"
+    - cron: '43 12 * * 2'
 
-# Minimal workflow-level default; job overrides what it needs
-permissions:
-  contents: read
-
-# Cancel in-progress scans for the same branch (keep latest)
-concurrency:
-  group: codeql-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
-
-# ──────────────────────────────────────────────────────────────
 jobs:
   analyze:
-    name: 🔐 CodeQL — ${{ matrix.language }}
-    runs-on: ubuntu-latest
-
+    name: Analyze (${{ matrix.language }})
+    # Runner size impacts CodeQL analysis time. To learn more, please see:
+    #   - https://gh.io/recommended-hardware-resources-for-running-codeql
+    #   - https://gh.io/supported-runners-and-hardware-resources
+    #   - https://gh.io/using-larger-runners (GitHub.com only)
+    # Consider using larger runners or machines with greater resources for possible analysis time improvements.
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
     permissions:
-      contents:        read    # checkout
-      security-events: write   # upload SARIF → GitHub Security tab
-      actions:         read    # required for private repos
-      pull-requests:   read    # inline PR annotations
+      # required for all workflows
+      security-events: write
+
+      # required to fetch internal or private CodeQL packs
+      packages: read
+
+      # only required for workflows in private repositories
+      actions: read
+      contents: read
 
     strategy:
       fail-fast: false
       matrix:
-        # java-kotlin is the modern specifier for Java (and Kotlin) projects
-        language: [ java-kotlin ]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Java 25
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "25"
-          cache: maven
-
-      # ── Initialize CodeQL ──────────────────────────────────
-      # build-mode: none  → CodeQL 3.0 GA feature.
-      #   Extracts Java source without executing Maven at all.
-      #   No Docker, no Testcontainers, ~3x faster than autobuild.
-      #
-      # queries: security-extended
-      #   Includes all default "code-scanning" queries PLUS:
-      #   • SSRF, deserialization, path traversal, log injection
-      #   • GitHub Actions-specific CWEs (injection, poisoning)
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: ${{ matrix.language }}
+        include:
+        - language: actions
           build-mode: none
-          queries: security-extended
+        - language: java-kotlin
+          build-mode: none # This mode only analyzes Java. Set this to 'autobuild' or 'manual' to analyze Kotlin too.
+        # CodeQL supports the following values keywords for 'language': 'actions', 'c-cpp', 'csharp', 'go', 'java-kotlin', 'javascript-typescript', 'python', 'ruby', 'rust', 'swift'
+        # Use `c-cpp` to analyze code written in C, C++ or both
+        # Use 'java-kotlin' to analyze code written in Java, Kotlin or both
+        # Use 'javascript-typescript' to analyze code written in JavaScript, TypeScript or both
+        # To learn more about changing the languages that are analyzed or customizing the build mode for your analysis,
+        # see https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/customizing-your-advanced-setup-for-code-scanning.
+        # If you are analyzing a compiled language, you can modify the 'build-mode' for that language to customize how
+        # your codebase is analyzed, see https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/codeql-code-scanning-for-compiled-languages
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      # ── Perform analysis ───────────────────────────────────
-      # upload: never  → we handle the upload in the next two steps
-      #   so that a missing Advanced Security licence never kills
-      #   the job (the analysis itself still runs and fails on real
-      #   findings).
-      - name: Perform CodeQL Analysis
-        id: codeql-analyze
-        uses: github/codeql-action/analyze@v4
-        with:
-          category: "/language:${{ matrix.language }}"
-          upload: never          # decouple analysis from upload
-          output: sarif-results  # save SARIF locally for both steps below
+    # Add any setup steps before running the `github/codeql-action/init` action.
+    # This includes steps like installing compilers or runtimes (`actions/setup-node`
+    # or others). This is typically only required for manual builds.
+    # - name: Setup runtime (example)
+    #   uses: actions/setup-example@v1
 
-      # ── Upload to GitHub Security tab ─────────────────────
-      # Requires GitHub Advanced Security (free for public repos,
-      # paid licence for private repos).
-      # continue-on-error: true → job succeeds even when GHAS is
-      # not enabled; results are still available as the artifact below.
-      - name: Upload SARIF to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
-        continue-on-error: true   # gracefully skips if GHAS not enabled
-        with:
-          sarif_file: sarif-results
-          category: "/language:${{ matrix.language }}"
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v4
+      with:
+        languages: ${{ matrix.language }}
+        build-mode: ${{ matrix.build-mode }}
+        # If you wish to specify custom queries, you can do so here or in a config file.
+        # By default, queries listed here will override any specified in a config file.
+        # Prefix the list here with "+" to use these queries and those in the config file.
 
-      # ── Always save SARIF as a downloadable artifact ──────
-      # Fallback when Advanced Security is not available:
-      # open the .sarif file in VS Code with the SARIF Viewer
-      # extension, or import it into any SARIF-compatible tool.
-      - name: Upload SARIF artifact (fallback)
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: codeql-sarif-${{ matrix.language }}-${{ github.run_id }}
-          path: sarif-results/
-          retention-days: 30
+        # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
+        # queries: security-extended,security-and-quality
 
+    # If the analyze step fails for one of the languages you are analyzing with
+    # "We were unable to automatically build your code", modify the matrix above
+    # to set the build mode to "manual" for that language. Then modify this step
+    # to build your code.
+    # ℹ️ Command-line programs to run using the OS shell.
+    # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
+    - name: Run manual build steps
+      if: matrix.build-mode == 'manual'
+      shell: bash
+      run: |
+        echo 'If you are using a "manual" build mode for one or more of the' \
+          'languages you are analyzing, replace this with the commands to build' \
+          'your code, for example:'
+        echo '  make bootstrap'
+        echo '  make release'
+        exit 1
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v4
+      with:
+        category: "/language:${{matrix.language}}"
