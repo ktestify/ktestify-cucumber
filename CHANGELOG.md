@@ -65,7 +65,6 @@ All notable changes to this project will be documented in this file.
 
 ### 🎉 New Contributors
 
-- @nil-malh made their first contribution in [#16](https://github.com/ktestify/ktestify-cucumber/pull/16)
 
 
 
