@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 
 - Added new steps for key only assertions — [@nil-malh](https://github.com/nil-malh)
 
+- Add README.md and update changelog workflow with new PAT — [@nil-malh](https://github.com/nil-malh)
+
 
 ### ⬆️ Dependency Updates
 
@@ -62,6 +64,7 @@ All notable changes to this project will be documented in this file.
 
 
 ### 🎉 New Contributors
+
 
 
 
