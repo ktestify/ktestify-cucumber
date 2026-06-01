@@ -38,15 +38,15 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
-      contents: write     # needed to commit CHANGELOG.md back to main
-      pull-requests: read  # Add this for fetching PR metadata
+      contents: read        # KTESTIFY_CHANGELOG_PAT handles the push to main
+      pull-requests: read   # fetch PR metadata for git-cliff
 
     steps:
       - name: Checkout (full history for cliff)
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.KTESTIFY_CHANGELOG_PAT }}
 
       - name: Generate CHANGELOG.md with git-cliff
         uses: orhun/git-cliff-action@v4
@@ -55,7 +55,7 @@ jobs:
         env:
           OUTPUT: CHANGELOG.md
           GITHUB_REPO: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.KTESTIFY_CHANGELOG_PAT }}
 
       - name: Commit updated CHANGELOG.md
         run: |
