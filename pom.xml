@@ -716,6 +716,7 @@
                                 <configuration>
                                     <!-- Prevent GPG from opening a GUI passphrase dialog in CI -->
                                     <gpgArguments>
+                                        <arg>--batch</arg>
                                         <arg>--pinentry-mode</arg>
                                         <arg>loopback</arg>
                                     </gpgArguments>
@@ -734,6 +735,7 @@
                             <!-- Matches the <server id> injected by setup-java in the release workflow -->
                             <publishingServerId>central</publishingServerId>
                             <!-- Wait for the deployment to become fully "published" before returning -->
+                            <deploymentName>${project.artifactId}-${project.version}</deploymentName>
                             <autoPublish>true</autoPublish>
                             <waitUntil>published</waitUntil>
                         </configuration>
