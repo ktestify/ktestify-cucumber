@@ -53,6 +53,8 @@ All notable changes to this project will be documented in this file.
 
 - Fixed an issue where the release was failing due to no device found /dev/tty — [@nil-malh](https://github.com/nil-malh)
 
+- Fixed an issue where the release was failing due to no device found /dev/tty — [@nil-malh](https://github.com/nil-malh)
+
 
 ### 🔧 Miscellaneous
 
