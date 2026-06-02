@@ -675,7 +675,7 @@
                         </labels>
                         <!-- Reproducible builds — pin the creation timestamp -->
                         <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
-                        <format>OCI</format>
+                        <format>Docker</format>
                     </container>
                     <!-- Skip the extra source/javadoc JARs that Shade produces -->
                     <extraDirectories>
@@ -736,7 +736,6 @@
                             <!-- Wait for the deployment to become fully "published" before returning -->
                             <deploymentName>${project.artifactId}-${project.version}</deploymentName>
                             <autoPublish>true</autoPublish>
-                            <waitUntil>published</waitUntil>
                         </configuration>
                     </plugin>
                 </plugins>
