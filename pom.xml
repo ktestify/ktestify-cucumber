@@ -624,10 +624,7 @@
                     <to>
                         <image>${jib.image}</image>
                         <tags>
-                            <!-- Always tag with the exact Maven version -->
                             <tag>${project.version}</tag>
-                            <!-- Also tag latest on every build -->
-                            <tag>latest</tag>
                         </tags>
                     </to>
                     <container>
