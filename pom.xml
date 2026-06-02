@@ -716,7 +716,6 @@
                                 <configuration>
                                     <!-- Prevent GPG from opening a GUI passphrase dialog in CI -->
                                     <gpgArguments>
-                                        <arg>--no-tty</arg>
                                         <arg>--pinentry-mode</arg>
                                         <arg>loopback</arg>
                                     </gpgArguments>
