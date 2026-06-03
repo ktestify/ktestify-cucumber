@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### ⬆️ Dependency Updates
+
+- Bump maven.surefire.plugin.version from 3.5.5 to 3.5.6 *(deps-dev)* — [@dependabot[bot]](https://github.com/dependabot[bot])
+
+
 ## [0.1.3] — 2026-06-02
 
 ### ✨ Features
@@ -71,7 +77,6 @@ All notable changes to this project will be documented in this file.
 
 
 ### 🎉 New Contributors
-
 
 
 
