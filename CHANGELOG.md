@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 
 - Bump maven.surefire.plugin.version from 3.5.5 to 3.5.6 *(deps-dev)* — [@dependabot[bot]](https://github.com/dependabot[bot])
 
+- Bump org.jacoco:jacoco-maven-plugin *(deps-dev)* — [@dependabot[bot]](https://github.com/dependabot[bot])
+
 
 ## [0.1.3] — 2026-06-02
 
