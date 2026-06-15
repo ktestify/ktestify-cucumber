@@ -9,6 +9,8 @@ All notable changes to this project will be documented in this file.
 
 - Bump org.jacoco:jacoco-maven-plugin *(deps-dev)* — [@dependabot[bot]](https://github.com/dependabot[bot])
 
+- Bump io.github.ktestify:ktestify-core from 0.1.0 to 0.1.1 *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot])
+
 
 ## [0.1.3] — 2026-06-02
 
