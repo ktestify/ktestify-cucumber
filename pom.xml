@@ -65,7 +65,7 @@
         <gson.version>2.14.0</gson.version>
         <junit.jupiter.version>6.1.0</junit.jupiter.version>
         <kafka.version>4.2.0</kafka.version>
-        <ktestify-core.version>0.1.0</ktestify-core.version>
+        <ktestify-core.version>0.1.1</ktestify-core.version>
         <ktestify-plugin-azureblob.version>0.1.0</ktestify-plugin-azureblob.version>
         <ktestify-plugin-notifications.version>0.1.0</ktestify-plugin-notifications.version>
         <lombok.version>1.18.46</lombok.version>
@@ -93,7 +93,7 @@
         <maven.source.plugin.version>3.4.0</maven.source.plugin.version>
         <maven.surefire.plugin.version>3.5.6</maven.surefire.plugin.version>
         <sonar.plugin.version>5.5.0.6356</sonar.plugin.version>
-        <spotless.plugin.version>3.5.1</spotless.plugin.version>
+        <spotless.plugin.version>3.6.0</spotless.plugin.version>
         <versions.plugin.version>2.21.0</versions.plugin.version>
         <central.publishing.plugin.version>0.10.0</central.publishing.plugin.version>
 
