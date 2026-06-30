@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+### ✨ Features
+
+- Added Azure Blob & Notifications as first party plugins (#26) — [@nil-malh](https://github.com/nil-malh) ([#26](https://github.com/ktestify/ktestify-cucumber/pull/26))
+
+
 ### ⬆️ Dependency Updates
 
 - Bump maven.surefire.plugin.version from 3.5.5 to 3.5.6 *(deps-dev)* — [@dependabot[bot]](https://github.com/dependabot[bot])
