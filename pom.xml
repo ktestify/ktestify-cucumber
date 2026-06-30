@@ -150,13 +150,6 @@
             <version>${commons-lang3.version}</version>
         </dependency>
 
-        <!-- Awaitility for asynchronous testing -->
-        <dependency>
-            <groupId>org.awaitility</groupId>
-            <artifactId>awaitility</artifactId>
-            <version>${awaitility.version}</version>
-        </dependency>
-
         <!-- Gson for JSON serialization/deserialization -->
         <dependency>
             <groupId>com.google.code.gson</groupId>
