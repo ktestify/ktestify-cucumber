@@ -2,7 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.1.4] — 2026-06-30
+
 ### ✨ Features
 
 - Added Azure Blob & Notifications as first party plugins (#26) — [@nil-malh](https://github.com/nil-malh) ([#26](https://github.com/ktestify/ktestify-cucumber/pull/26))
