@@ -28,9 +28,7 @@ public final class KtestifyBanner {
     // ── ANSI escape codes ────────────────────────────────────────────────────
     private static final String RESET = "\u001B[0m";
     private static final String BOLD = "\u001B[1m";
-    private static final String CYAN = "\u001B[36m";
     private static final String YELLOW = "\u001B[33m";
-    private static final String DIM = "\u001B[2m";
 
     /** KTESTIFY — ANSI Shadow block font */
     private static final String BANNER = """
@@ -50,7 +48,7 @@ public final class KtestifyBanner {
      */
     public static void print() {
         String version = resolveVersion();
-        System.out.println(BOLD + BANNER.replace("version", YELLOW + "v " + version + RESET) + RESET);
+        System.out.println(BOLD + BANNER.replace("version", YELLOW + version + RESET) + RESET);
         System.out.println();
     }
 

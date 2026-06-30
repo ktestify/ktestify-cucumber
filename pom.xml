@@ -560,9 +560,15 @@
                                 </filter>
                             </filters>
                             <transformers>
-                                <!-- Set the main class -->
+                                <!-- Set the main class and preserve manifest entries -->
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>io.github.ktestify.KtestifyMain</mainClass>
+                                    <manifestEntries>
+                                        <Implementation-Title>${project.name}</Implementation-Title>
+                                        <Implementation-Version>${project.version}</Implementation-Version>
+                                        <Implementation-Vendor-Id>${project.groupId}</Implementation-Vendor-Id>
+                                        <Implementation-Vendor>ktestify</Implementation-Vendor>
+                                    </manifestEntries>
                                 </transformer>
                                 <!-- Merge Cucumber / SPI service descriptors -->
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
