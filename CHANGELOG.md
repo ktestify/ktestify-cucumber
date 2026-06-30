@@ -27,6 +27,11 @@ All notable changes to this project will be documented in this file.
 - Bump org.sonatype.central:central-publishing-maven-plugin *(deps-dev)* — [@dependabot[bot]](https://github.com/dependabot[bot])
 
 
+### 🐛 Bug Fixes
+
+- Fixed an issue where the version was not displayed in the banner (#29) — [@nil-malh](https://github.com/nil-malh) ([#29](https://github.com/ktestify/ktestify-cucumber/pull/29))
+
+
 ## [0.1.3] — 2026-06-02
 
 ### ✨ Features
