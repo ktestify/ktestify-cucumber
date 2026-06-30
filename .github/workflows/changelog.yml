@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Checkout (full history for cliff)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ secrets.KTESTIFY_CHANGELOG_PAT }}
@@ -81,7 +81,7 @@ jobs:
 
     steps:
       - name: Checkout (full history for cliff)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
