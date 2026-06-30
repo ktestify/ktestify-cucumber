@@ -15,6 +15,8 @@ All notable changes to this project will be documented in this file.
 
 - Bump the cucumber group with 4 updates *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot])
 
+- Bump the junit5 group with 3 updates *(deps-dev)* — [@dependabot[bot]](https://github.com/dependabot[bot])
+
 
 ## [0.1.3] — 2026-06-02
 
