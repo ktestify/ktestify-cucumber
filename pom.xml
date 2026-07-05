@@ -65,12 +65,12 @@
         <gson.version>2.14.0</gson.version>
         <junit.jupiter.version>6.1.1</junit.jupiter.version>
         <kafka.version>4.2.0</kafka.version>
-        <ktestify-core.version>0.1.1</ktestify-core.version>
+        <ktestify-core.version>0.1.2</ktestify-core.version>
         <ktestify-plugin-azureblob.version>0.1.0</ktestify-plugin-azureblob.version>
         <ktestify-plugin-notifications.version>0.1.0</ktestify-plugin-notifications.version>
         <lombok.version>1.18.46</lombok.version>
         <mockito.version>5.23.0</mockito.version>
-        <jackson.version>2.19.2</jackson.version>
+        <jackson.version>2.21.2</jackson.version>
         <log4j2.version>2.26.0</log4j2.version>
         <slf4j.version>2.0.18</slf4j.version>
         <snakeyaml.version>2.6</snakeyaml.version>
@@ -103,6 +103,28 @@
         <jib.image>ghcr.io/ktestify/ktestify-cucumber</jib.image>
         <jib.base.image>eclipse-temurin:25-jre-alpine</jib.base.image>
     </properties>
+
+    <!-- ===================================================== -->
+    <!-- Dependency Management — version alignment             -->
+    <!-- ===================================================== -->
+    <dependencyManagement>
+        <dependencies>
+            <!--
+                Pin ALL com.fasterxml.jackson.* modules to the same version.
+                Without this, transitive deps (e.g. cucumber-reportr's jackson-databind:2.21.2,
+                kafka-streams-avro-serde's jackson-annotations:2.20, etc.) pull in mixed
+                patch versions which causes ObjectMapper's static initializer to throw
+                NoClassDefFoundError at runtime (e.g. missing JsonSerializeAs annotation).
+            -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <!-- ===================================== -->
@@ -344,6 +366,27 @@
                 <configuration>
                     <encoding>${project.build.sourceEncoding}</encoding>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>filter-version-properties</id>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <phase>process-resources</phase>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources</directory>
+                                    <filtering>true</filtering>
+                                    <includes>
+                                        <include>version.properties</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- ===================================== -->
@@ -556,6 +599,24 @@
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                                <!--
+                                    Exclude the stub Log4j2Plugins.dat (85 bytes) from Confluent's
+                                    logredactor — it overwrites the real 21 KB one from log4j-core,
+                                    breaking Log4j2 plugin discovery and causing
+                                    "No Log4j 2 configuration file found" at runtime.
+                                -->
+                                <filter>
+                                    <artifact>io.confluent:logredactor</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat</exclude>
+                                    </excludes>
+                                </filter>
+                                <filter>
+                                    <artifact>io.confluent:logredactor-metrics</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat</exclude>
                                     </excludes>
                                 </filter>
                             </filters>

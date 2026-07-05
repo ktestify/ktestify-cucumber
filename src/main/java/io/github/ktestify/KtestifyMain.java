@@ -133,7 +133,9 @@ public class KtestifyMain {
      */
     static String[] buildArgs(String[] userArgs, List<String> pluginGlue) {
         if (userArgs != null && userArgs.length > 0) {
-            return ensureGlue(userArgs, pluginGlue);
+            List<String> args = new ArrayList<>(List.of(ensureGlue(userArgs, pluginGlue)));
+            addReportingPlugins(args);
+            return args.toArray(String[]::new);
         }
         return buildDefaultArgs(pluginGlue);
     }

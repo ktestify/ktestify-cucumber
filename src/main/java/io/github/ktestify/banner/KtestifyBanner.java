@@ -16,12 +16,16 @@
 package io.github.ktestify.banner;
 
 import io.github.ktestify.KtestifyMain;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 
 /**
  * Prints the KTestify ASCII banner with version information to {@code System.out} when the test suite starts.
  *
  * <p>The version is resolved at build time via a Maven-filtered {@code version.properties} file bundled in the
- * classpath.
+ * classpath. This approach works in both the shaded JAR and the JIB container image, where the JAR manifest is not
+ * available on the classpath.
  */
 public final class KtestifyBanner {
 
@@ -37,7 +41,7 @@ public final class KtestifyBanner {
             | ' /  | |/ _ \\/ __| __| | |_| | | |
             | . \\  | |  __/\\__ \\ |_| |  _| |_| |
             |_|\\_\\ |_|\\___||___/\\__|_|_|  \\__, |
-                                          |___/\s <version>
+                                          |___/  <version>
             """;
 
     private KtestifyBanner() {}
@@ -55,8 +59,27 @@ public final class KtestifyBanner {
     // ─────────────────────────────────────────────────────────────────────────
 
     private static String resolveVersion() {
-        return KtestifyMain.class.getPackage().getImplementationVersion() != null
-                ? KtestifyMain.class.getPackage().getImplementationVersion()
-                : "dev";
+        // Try the Maven-filtered version.properties file on the classpath first.
+        // This works in both the shaded JAR and the JIB container image.
+        try (InputStream is = KtestifyMain.class.getResourceAsStream("/version.properties")) {
+            if (is != null) {
+                Properties props = new Properties();
+                props.load(is);
+                String v = props.getProperty("ktestify.version");
+                if (v != null && !v.isBlank() && !v.startsWith("${")) {
+                    return v;
+                }
+            }
+        } catch (IOException e) {
+            // fall through to manifest lookup
+        }
+
+        // Fallback: JAR manifest (works for shaded JAR, not for JIB)
+        String manifestVersion = KtestifyMain.class.getPackage().getImplementationVersion();
+        if (manifestVersion != null && !manifestVersion.isBlank()) {
+            return manifestVersion;
+        }
+
+        return "dev";
     }
 }
