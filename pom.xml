@@ -70,7 +70,7 @@
         <ktestify-plugin-notifications.version>0.1.0</ktestify-plugin-notifications.version>
         <lombok.version>1.18.46</lombok.version>
         <mockito.version>5.23.0</mockito.version>
-        <jackson.version>2.21.2</jackson.version>
+        <jackson.version>2.22.0</jackson.version>
         <log4j2.version>2.26.0</log4j2.version>
         <slf4j.version>2.0.18</slf4j.version>
         <snakeyaml.version>2.6</snakeyaml.version>
