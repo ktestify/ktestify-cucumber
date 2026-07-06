@@ -93,7 +93,7 @@
         <maven.source.plugin.version>3.4.0</maven.source.plugin.version>
         <maven.surefire.plugin.version>3.5.6</maven.surefire.plugin.version>
         <sonar.plugin.version>5.5.0.6356</sonar.plugin.version>
-        <spotless.plugin.version>3.7.0</spotless.plugin.version>
+        <spotless.plugin.version>3.8.0</spotless.plugin.version>
         <versions.plugin.version>2.21.0</versions.plugin.version>
         <central.publishing.plugin.version>0.11.0</central.publishing.plugin.version>
 
