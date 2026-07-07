@@ -2,7 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.0.5] — 2026-07-07
+
 ### 🐛 Bug Fixes
 
 - Added missing version.properties file — [@nil-malh](https://github.com/nil-malh)
