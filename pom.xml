@@ -7,7 +7,7 @@
         <version>1.0.2</version>
     </parent>
     <artifactId>ktestify-cucumber</artifactId>
-    <version>0.1.5-SNAPSHOT</version>
+    <version>1.0.5</version>
     <packaging>jar</packaging>
     <name>ktestify-cucumber</name>
     <description>A comprehensive Cucumber Kafka testing framework for integration and end-to-end testing</description>
