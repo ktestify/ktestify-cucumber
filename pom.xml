@@ -1,20 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
-    <!-- Project Coordinates -->
-    <groupId>io.github.ktestify</groupId>
+    <parent>
+        <groupId>io.github.ktestify</groupId>
+        <artifactId>ktestify-parent</artifactId>
+        <version>1.0.2</version>
+    </parent>
     <artifactId>ktestify-cucumber</artifactId>
     <version>0.1.5-SNAPSHOT</version>
     <packaging>jar</packaging>
-
-    <!-- Project Information -->
     <name>ktestify-cucumber</name>
     <description>A comprehensive Cucumber Kafka testing framework for integration and end-to-end testing</description>
     <url>https://github.com/ktestify/ktestify-cucumber</url>
     <inceptionYear>2026</inceptionYear>
-
-    <!-- Licenses -->
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
@@ -22,8 +20,6 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
-
-    <!-- Developers -->
     <developers>
         <developer>
             <id>lead-developer</id>
@@ -31,230 +27,91 @@
             <email>malhomme.nil+oss@icloud.com</email>
         </developer>
     </developers>
-
-    <!-- SCM Information -->
     <scm>
-        <connection>scm:git:git://github.com/ktestify/ktestify-core.git</connection>
-        <developerConnection>scm:git:ssh://github.com:ktestify/ktestify-core.git</developerConnection>
-        <url>https://github.com/ktestify/ktestify-core/tree/main</url>
+        <connection>scm:git:git://github.com/ktestify/ktestify-cucumber.git</connection>
+        <developerConnection>scm:git:ssh://github.com:ktestify/ktestify-cucumber.git</developerConnection>
+        <url>https://github.com/ktestify/ktestify-cucumber/tree/main</url>
     </scm>
-
-    <!-- Issue Management -->
     <issueManagement>
         <system>GitHub Issues</system>
-        <url>https://github.com/ktestify/ktestify-core/issues</url>
+        <url>https://github.com/ktestify/ktestify-cucumber/issues</url>
     </issueManagement>
     <properties>
-        <!-- Build Properties -->
-        <java.version>25</java.version>
-        <maven.compiler.release>${java.version}</maven.compiler.release>
-        <maven.compiler.source>${java.version}</maven.compiler.source>
-        <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.finalName>ktestify-cucumber</project.build.finalName>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-
-        <!-- Dependency Versions (Alphabetically Ordered) -->
-        <awaitility.version>4.3.0</awaitility.version>
-        <commons-cli.version>1.11.0</commons-cli.version>
-        <commons-io.version>2.22.0</commons-io.version>
-        <commons-lang3.version>3.20.0</commons-lang3.version>
-        <confluent.version>8.2.0</confluent.version>
-        <cucumber.version>7.34.4</cucumber.version>
-        <cucumber-reportr.version>1.3.0</cucumber-reportr.version>
-        <gson.version>2.14.0</gson.version>
-        <junit.jupiter.version>6.1.1</junit.jupiter.version>
-        <kafka.version>4.2.0</kafka.version>
-        <ktestify-core.version>0.1.2</ktestify-core.version>
-        <ktestify-plugin-azureblob.version>0.1.0</ktestify-plugin-azureblob.version>
-        <ktestify-plugin-notifications.version>0.1.0</ktestify-plugin-notifications.version>
-        <lombok.version>1.18.46</lombok.version>
-        <mockito.version>5.23.0</mockito.version>
-        <jackson.version>2.21.2</jackson.version>
-        <log4j2.version>2.26.0</log4j2.version>
-        <slf4j.version>2.0.18</slf4j.version>
-        <snakeyaml.version>2.6</snakeyaml.version>
-        <testcontainers.version>2.0.5</testcontainers.version>
-        <testcontainers-kafka.version>2.0.5</testcontainers-kafka.version>
-        <typesafe.config.version>1.4.6</typesafe.config.version>
-        <xmlunit.version>2.11.0</xmlunit.version>
-
-        <!-- Maven Plugin Versions (Alphabetically Ordered) -->
-        <exec.plugin.version>3.1.1</exec.plugin.version>
-        <jacoco.plugin.version>0.8.15</jacoco.plugin.version>
-        <maven.compiler.plugin.version>3.15.0</maven.compiler.plugin.version>
-        <maven.deploy.plugin.version>3.1.4</maven.deploy.plugin.version>
-        <maven.gpg.plugin.version>3.2.8</maven.gpg.plugin.version>
-        <maven.install.plugin.version>3.1.4</maven.install.plugin.version>
-        <maven.jar.plugin.version>3.5.0</maven.jar.plugin.version>
-        <maven.javadoc.plugin.version>3.12.0</maven.javadoc.plugin.version>
-        <maven.resources.plugin.version>3.5.0</maven.resources.plugin.version>
-        <maven.shade.plugin.version>3.6.2</maven.shade.plugin.version>
-        <maven.source.plugin.version>3.4.0</maven.source.plugin.version>
-        <maven.surefire.plugin.version>3.5.6</maven.surefire.plugin.version>
-        <sonar.plugin.version>5.5.0.6356</sonar.plugin.version>
-        <spotless.plugin.version>3.7.0</spotless.plugin.version>
-        <versions.plugin.version>2.21.0</versions.plugin.version>
-        <central.publishing.plugin.version>0.11.0</central.publishing.plugin.version>
-
-        <!-- JIB -->
-        <jib.maven.plugin.version>3.5.1</jib.maven.plugin.version>
-        <!-- Target GHCR image — override with -Djib.image or set in CI -->
         <jib.image>ghcr.io/ktestify/ktestify-cucumber</jib.image>
         <jib.base.image>eclipse-temurin:25-jre-alpine</jib.base.image>
     </properties>
-
-    <!-- ===================================================== -->
-    <!-- Dependency Management — version alignment             -->
-    <!-- ===================================================== -->
-    <dependencyManagement>
-        <dependencies>
-            <!--
-                Pin ALL com.fasterxml.jackson.* modules to the same version.
-                Without this, transitive deps (e.g. cucumber-reportr's jackson-databind:2.21.2,
-                kafka-streams-avro-serde's jackson-annotations:2.20, etc.) pull in mixed
-                patch versions which causes ObjectMapper's static initializer to throw
-                NoClassDefFoundError at runtime (e.g. missing JsonSerializeAs annotation).
-            -->
-            <dependency>
-                <groupId>com.fasterxml.jackson</groupId>
-                <artifactId>jackson-bom</artifactId>
-                <version>${jackson.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
     <dependencies>
-        <!-- ===================================== -->
-        <!-- ktestify-core                         -->
-        <!-- ===================================== -->
-
         <dependency>
             <groupId>io.github.ktestify</groupId>
             <artifactId>ktestify-core</artifactId>
-            <version>${ktestify-core.version}</version>
+            <version>1.0.3</version>
         </dependency>
-
-        <!-- ===================================== -->
-        <!-- KTestify plugins                      -->
-        <!-- ===================================== -->
-
-        <!-- Azure Blob Plugin -->
         <dependency>
             <groupId>io.github.ktestify</groupId>
             <artifactId>ktestify-plugin-azureblob</artifactId>
-            <version>${ktestify-plugin-azureblob.version}</version>
+            <version>0.1.1</version>
         </dependency>
-
-        <!-- Notification Plugin -->
         <dependency>
             <groupId>io.github.ktestify</groupId>
             <artifactId>ktestify-plugin-notifications</artifactId>
-            <version>${ktestify-plugin-notifications.version}</version>
+            <version>0.1.1</version>
         </dependency>
-
-        <!-- ===================================== -->
-        <!-- Core Framework Dependencies           -->
-        <!-- ===================================== -->
-
-        <!-- Apache Commons -->
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>${commons-io.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>${commons-lang3.version}</version>
-        </dependency>
-
-        <!-- Gson for JSON serialization/deserialization -->
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
-            <version>${gson.version}</version>
         </dependency>
-
-        <!-- Lombok for boilerplate code reduction -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>${lombok.version}</version>
-            <scope>provided</scope>
         </dependency>
-
-        <!-- ===================================== -->
-        <!-- Logging Dependencies                  -->
-        <!-- ===================================== -->
-
-        <!-- SLF4J API for logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
         </dependency>
-
-        <!-- Log4j2 — SLF4J 2.x binding -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j2-impl</artifactId>
-            <version>${log4j2.version}</version>
         </dependency>
-
-        <!-- Log4j2 API -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
-            <version>${log4j2.version}</version>
         </dependency>
-
-        <!-- Log4j2 Core -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>${log4j2.version}</version>
         </dependency>
-
-        <!-- ===================================== -->
-        <!-- BDD and Cucumber Dependencies         -->
-        <!-- ===================================== -->
-
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-core</artifactId>
-            <version>${cucumber.version}</version>
         </dependency>
-
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-java</artifactId>
-            <version>${cucumber.version}</version>
             <scope>compile</scope>
         </dependency>
-
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-junit</artifactId>
-            <version>${cucumber.version}</version>
         </dependency>
-
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-picocontainer</artifactId>
-            <version>${cucumber.version}</version>
         </dependency>
-
-        <!-- Cucumber reporting -->
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>datatable</artifactId>
+            <version>7.34.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+            <version>1.12.1</version>
+        </dependency>
         <dependency>
             <groupId>io.github.nil-malh</groupId>
             <artifactId>cucumber-reportr</artifactId>
-            <version>${cucumber-reportr.version}</version>
             <exclusions>
-                <!-- Excluded: replaced by log4j-slf4j2-impl (Log4j2) -->
                 <exclusion>
                     <groupId>org.slf4j</groupId>
                     <artifactId>slf4j-reload4j</artifactId>
@@ -273,99 +130,41 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
-        <!-- ===================================== -->
-        <!-- Test Dependencies                     -->
-        <!-- ===================================== -->
-
-        <!-- JUnit 5 -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>${junit.jupiter.version}</version>
-            <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
-            <version>${junit.jupiter.version}</version>
-            <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-params</artifactId>
-            <version>${junit.jupiter.version}</version>
-            <scope>test</scope>
         </dependency>
-
-        <!-- Mockito for mocking -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>${mockito.version}</version>
-            <scope>test</scope>
         </dependency>
-
-        <!-- Testcontainers for integration testing -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
-            <version>${testcontainers.version}</version>
-            <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-junit-jupiter</artifactId>
-            <version>${testcontainers.version}</version>
-            <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-kafka</artifactId>
-            <version>${testcontainers-kafka.version}</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
-
     <build>
         <finalName>${project.build.finalName}</finalName>
         <plugins>
-            <!-- ===================================== -->
-            <!-- Compiler Plugin                       -->
-            <!-- ===================================== -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven.compiler.plugin.version}</version>
-                <configuration>
-                    <release>${java.version}</release>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
-                    <encoding>${project.build.sourceEncoding}</encoding>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-
-            <!-- ===================================== -->
-            <!-- Resources Plugin                      -->
-            <!-- ===================================== -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
-                <version>${maven.resources.plugin.version}</version>
-                <configuration>
-                    <encoding>${project.build.sourceEncoding}</encoding>
-                </configuration>
                 <executions>
                     <execution>
                         <id>filter-version-properties</id>
@@ -388,67 +187,10 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <!-- ===================================== -->
-            <!-- JAR Plugin                            -->
-            <!-- ===================================== -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>${maven.jar.plugin.version}</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-                        </manifest>
-                        <manifestEntries>
-                            <Built-By>${user.name}</Built-By>
-                            <Build-Time>${maven.build.timestamp}</Build-Time>
-                        </manifestEntries>
-                    </archive>
-                </configuration>
-            </plugin>
-
-            <!-- ===================================== -->
-            <!-- Surefire Plugin for Testing           -->
-            <!-- ===================================== -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven.surefire.plugin.version}</version>
-                <configuration>
-                    <includes>
-                        <include>**/*Test.java</include>
-                        <include>**/*Tests.java</include>
-                    </includes>
-                    <argLine>@{argLine}
-                        -Xmx1024m
-                        -XX:+EnableDynamicAgentLoading</argLine>
-                </configuration>
-            </plugin>
-
-            <!-- ===================================== -->
-            <!-- JaCoCo for Code Coverage              -->
-            <!-- ===================================== -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${jacoco.plugin.version}</version>
                 <executions>
-                    <execution>
-                        <id>jacoco-initialize</id>
-                        <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>jacoco-report</id>
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
-                        <phase>test</phase>
-                    </execution>
                     <execution>
                         <id>jacoco-check</id>
                         <goals>
@@ -472,114 +214,9 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <!-- ===================================== -->
-            <!-- Spotless Plugin                       -->
-            <!-- ===================================== -->
-            <plugin>
-                <groupId>com.diffplug.spotless</groupId>
-                <artifactId>spotless-maven-plugin</artifactId>
-                <version>${spotless.plugin.version}</version>
-                <configuration>
-                    <java>
-                        <includes>
-                            <include>src/main/java/**/*.java</include>
-                            <include>src/test/java/**/*.java</include>
-                        </includes>
-                        <palantirJavaFormat>
-                            <version>2.90.0</version>
-                            <style>PALANTIR</style>
-                            <formatJavadoc>true</formatJavadoc>
-                        </palantirJavaFormat>
-                        <removeUnusedImports/>
-                        <formatAnnotations/>
-                        <importOrder/>
-                        <trimTrailingWhitespace/>
-                        <endWithNewline/>
-                        <licenseHeader>
-                            <file>.spotless/HEADER.txt</file>
-                        </licenseHeader>
-                    </java>
-                    <pom>
-                        <includes>
-                            <include>pom.xml</include>
-                        </includes>
-                        <sortPom>
-                            <encoding>UTF-8</encoding>
-                            <keepBlankLines>true</keepBlankLines>
-                            <nrOfIndentSpace>4</nrOfIndentSpace>
-                            <expandEmptyElements>false</expandEmptyElements>
-                        </sortPom>
-                    </pom>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                        <phase>package</phase>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- ===================================== -->
-            <!-- Source Plugin (for open source)       -->
-            <!-- ===================================== -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>${maven.source.plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar-no-fork</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- ===================================== -->
-            <!-- Javadoc Plugin (for open source)      -->
-            <!-- ===================================== -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>${maven.javadoc.plugin.version}</version>
-                <configuration>
-                    <encoding>${project.build.sourceEncoding}</encoding>
-                    <doclint>none</doclint>
-                    <quiet>true</quiet>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- ===================================== -->
-            <!-- Versions Plugin                       -->
-            <!-- ===================================== -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>versions-maven-plugin</artifactId>
-                <version>${versions.plugin.version}</version>
-                <configuration>
-                    <generateBackupPoms>false</generateBackupPoms>
-                </configuration>
-            </plugin>
-
-            <!-- ===================================== -->
-            <!-- Shade Plugin — fat / uber JAR         -->
-            <!-- ===================================== -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>${maven.shade.plugin.version}</version>
                 <executions>
                     <execution>
                         <id>shade-jar</id>
@@ -591,7 +228,6 @@
                             <finalName>ktestify-cucumber</finalName>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <filters>
-                                <!-- Strip module-info and signature files to avoid JAR signing conflicts -->
                                 <filter>
                                     <artifact>*:*</artifact>
                                     <excludes>
@@ -601,12 +237,6 @@
                                         <exclude>META-INF/*.RSA</exclude>
                                     </excludes>
                                 </filter>
-                                <!--
-                                    Exclude the stub Log4j2Plugins.dat (85 bytes) from Confluent's
-                                    logredactor — it overwrites the real 21 KB one from log4j-core,
-                                    breaking Log4j2 plugin discovery and causing
-                                    "No Log4j 2 configuration file found" at runtime.
-                                -->
                                 <filter>
                                     <artifact>io.confluent:logredactor</artifact>
                                     <excludes>
@@ -621,7 +251,6 @@
                                 </filter>
                             </filters>
                             <transformers>
-                                <!-- Set the main class and preserve manifest entries -->
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>io.github.ktestify.KtestifyMain</mainClass>
                                     <manifestEntries>
@@ -631,9 +260,7 @@
                                         <Implementation-Vendor>ktestify</Implementation-Vendor>
                                     </manifestEntries>
                                 </transformer>
-                                <!-- Merge Cucumber / SPI service descriptors -->
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                                <!-- Merge HOCON / Typesafe Config reference.conf files -->
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                     <resource>reference.conf</resource>
                                 </transformer>
@@ -642,54 +269,12 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <!-- ===================================== -->
-            <!-- Install Plugin                        -->
-            <!-- ===================================== -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-install-plugin</artifactId>
-                <version>${maven.install.plugin.version}</version>
-            </plugin>
-
-            <!-- ===================================== -->
-            <!-- Deploy Plugin                         -->
-            <!-- ===================================== -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <version>${maven.deploy.plugin.version}</version>
-            </plugin>
-
-            <!-- ===================================== -->
-            <!-- JIB Plugin — container image build    -->
-            <!-- Usage:                                -->
-            <!--   Push to GHCR:                       -->
-            <!--     mvn jib:build                     -->
-            <!--   Local Docker daemon:                -->
-            <!--     mvn jib:dockerBuild               -->
-            <!--   Local tar archive:                  -->
-            <!--     mvn jib:buildTar                  -->
-            <!--                                       -->
-            <!-- Auth for GHCR (one of):               -->
-            <!--   1. ~/.m2/settings.xml server entry  -->
-            <!--      <server>                          -->
-            <!--        <id>ghcr.io</id>               -->
-            <!--        <username>GITHUB_ACTOR</username-->
-            <!--        <password>GITHUB_TOKEN</password-->
-            <!--      </server>                         -->
-            <!--   2. Env vars:                         -->
-            <!--      -Djib.to.auth.username=$ACTOR    -->
-            <!--      -Djib.to.auth.password=$TOKEN    -->
-            <!-- ===================================== -->
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
                 <artifactId>jib-maven-plugin</artifactId>
-                <version>${jib.maven.plugin.version}</version>
                 <configuration>
                     <from>
                         <image>${jib.base.image}</image>
-                        <!-- Platforms — amd64 + arm64 (Apple Silicon / cloud ARM) -->
                         <platforms>
                             <platform>
                                 <os>linux</os>
@@ -709,35 +294,20 @@
                     </to>
                     <container>
                         <mainClass>io.github.ktestify.KtestifyMain</mainClass>
-                        <!-- JVM flags: tune for a short-lived CLI process -->
                         <jvmFlags>
                             <jvmFlag>-XX:+UseContainerSupport</jvmFlag>
                             <jvmFlag>-XX:MaxRAMPercentage=75.0</jvmFlag>
                             <jvmFlag>-XX:+ExitOnOutOfMemoryError</jvmFlag>
                         </jvmFlags>
-                        <!--
-                            The test runner mounts external assets, features, and a HOCON
-                            config file at runtime.  Document the expected mount points here
-                            so Docker / Compose users know which paths to bind-mount.
-
-                            Mount                         Default inside container
-                            ─────────────────────────     ────────────────────────
-                            features dir        →  /workspace/features
-                            assets dir          →  /workspace/assets
-                            config file         →  /workspace/config/application.conf
-                                                   (set -Dconfig.file=/workspace/config/application.conf)
-                        -->
                         <workingDirectory>/workspace</workingDirectory>
                         <volumes>
                             <volume>/workspace/features</volume>
                             <volume>/workspace/assets</volume>
                             <volume>/workspace/config</volume>
                             <volume>/workspace/reports</volume>
-                            <!-- Third-party plugin JARs: drop *.jar files here at runtime -->
                             <volume>/workspace/plugins</volume>
                         </volumes>
                         <environment>
-                            <!-- Sensible defaults — override at runtime via -e flags -->
                             <KTESTIFY_FEATURES_PATH>/workspace/features</KTESTIFY_FEATURES_PATH>
                             <KTESTIFY_ASSETS_DIR>/workspace/assets</KTESTIFY_ASSETS_DIR>
                         </environment>
@@ -750,88 +320,20 @@
                             <org.opencontainers.image.licenses>Apache-2.0</org.opencontainers.image.licenses>
                             <org.opencontainers.image.version>${project.version}</org.opencontainers.image.version>
                         </labels>
-                        <!-- Reproducible builds — pin the creation timestamp -->
                         <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
                         <format>Docker</format>
                     </container>
-                    <!-- Skip the extra source/javadoc JARs that Shade produces -->
                     <extraDirectories>
-                        <paths>
-                            <!--
-                                If you need extra files (e.g. a default log4j2 config) inside
-                                the image, add them under src/main/jib/ — JIB merges that
-                                directory into the image root automatically.
-                            -->
-                        </paths>
+                        <paths/>
                     </extraDirectories>
                 </configuration>
             </plugin>
         </plugins>
     </build>
-
-    <!-- ===================================== -->
-    <!-- Profiles                              -->
-    <!-- ===================================== -->
     <profiles>
-        <!-- Profile for signing artifacts and publishing to Maven Central -->
-        <profile>
-            <id>release</id>
-            <build>
-                <plugins>
-                    <!-- GPG signing (required by Maven Central) -->
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <version>${maven.gpg.plugin.version}</version>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                                <phase>verify</phase>
-                                <configuration>
-                                    <!-- Prevent GPG from opening a GUI passphrase dialog in CI -->
-                                    <gpgArguments>
-                                        <arg>--pinentry-mode</arg>
-                                        <arg>loopback</arg>
-                                    </gpgArguments>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-
-                    <!-- Maven Central Portal publisher (replaces the legacy OSSRH Nexus flow) -->
-                    <plugin>
-                        <groupId>org.sonatype.central</groupId>
-                        <artifactId>central-publishing-maven-plugin</artifactId>
-                        <version>${central.publishing.plugin.version}</version>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <!-- Matches the <server id> injected by setup-java in the release workflow -->
-                            <publishingServerId>central</publishingServerId>
-                            <!-- Wait for the deployment to become fully "published" before returning -->
-                            <deploymentName>${project.artifactId}-${project.version}</deploymentName>
-                            <autoPublish>true</autoPublish>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-        <!-- Profile for skipping tests -->
-        <profile>
-            <id>skip-tests</id>
-            <properties>
-                <maven.test.skip>true</maven.test.skip>
-            </properties>
-        </profile>
-
-        <!-- Profile for integration tests -->
         <profile>
             <id>integration-tests</id>
             <properties>
-                <!-- Default tag filter when -Dcucumber.it.tags is not supplied -->
                 <cucumber.it.tags>@integration</cucumber.it.tags>
             </properties>
             <build>
@@ -839,33 +341,16 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                        <version>${maven.surefire.plugin.version}</version>
                         <configuration>
-                            <includes>
-                                <include>**/*IT.java</include>
-                            </includes>
-                            <argLine>@{argLine}
-                                -Xmx2048m
-                                -XX:+EnableDynamicAgentLoading</argLine>
+                            <argLine>@{argLine} -Xmx2048m -XX:+EnableDynamicAgentLoading</argLine>
                             <systemPropertyVariables>
-                                <!-- Cucumber tag filter: override with -Dcucumber.it.tags="@smoke" -->
                                 <cucumber.it.tags>${cucumber.it.tags}</cucumber.it.tags>
-                                <!-- Assets directory resolved to the absolute project path -->
                                 <ktestify.assets.dir>${project.basedir}/src/test/resources/data</ktestify.assets.dir>
                             </systemPropertyVariables>
                         </configuration>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>integration-test</goal>
-                                    <goal>verify</goal>
-                                </goals>
-                            </execution>
-                        </executions>
                     </plugin>
                 </plugins>
             </build>
         </profile>
     </profiles>
-
 </project>
