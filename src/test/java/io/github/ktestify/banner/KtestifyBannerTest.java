@@ -66,7 +66,7 @@ class KtestifyBannerTest {
         String output = captured.toString();
         // Version is either the MANIFEST value or the fallback "dev"
         assertTrue(
-                output.contains("dev") || output.contains("SNAPSHOT") || output.contains("v "),
+                output.contains("dev") || output.contains("SNAPSHOT") || output.matches("(?s).*\\d\\.\\d.*"),
                 "Expected version token in banner output");
     }
 }
