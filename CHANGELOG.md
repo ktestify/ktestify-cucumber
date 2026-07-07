@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### 🐛 Bug Fixes
+
+- Added missing version.properties file — [@nil-malh](https://github.com/nil-malh)
+
+
 ## [0.1.4] — 2026-06-30
 
 ### ✨ Features
