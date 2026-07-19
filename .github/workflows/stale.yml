@@ -14,6 +14,11 @@
 # ============================================================
 name: Stale
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 on:
   schedule:
     # Run at 01:00 UTC every day
