@@ -25,13 +25,11 @@ on:
       - "CHANGELOG.md"
       - "LICENSE"
 
-permissions:
-  contents: write
-  pull-requests: read
-  actions: read
-
 jobs:
   changelog:
+    permissions:
+      contents: write        # update-changelog job pushes CHANGELOG.md commits via checkout
+      pull-requests: write   # preview-changelog job posts/updates the PR comment
     uses: ktestify/.github/.github/workflows/reusable-changelog.yml@main
     secrets:
       KTESTIFY_CHANGELOG_PAT: ${{ secrets.KTESTIFY_CHANGELOG_PAT }}

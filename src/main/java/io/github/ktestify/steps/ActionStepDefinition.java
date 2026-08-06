@@ -25,7 +25,9 @@ import io.github.ktestify.models.Topic;
 import io.github.ktestify.script.ScriptService;
 import io.github.ktestify.services.ProducerValidationService;
 import io.github.ktestify.utils.DataTableUtils;
+import io.github.ktestify.utils.TopicUtils;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
@@ -52,9 +54,11 @@ public class ActionStepDefinition {
 
     @When("record from file is sent")
     public void whenRecordFromFileIsSent(DataTable dataTable) {
-        Map<String, String> row = DataTableUtils.firstRow(dataTable);
-        Topic topic = resolveTopic(row);
-        producerService.sendRawFromFile(row, topic, resources.assetsDirectory);
+        List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
+        Topic topic = resolveAndAssertSingleTopic(rows);
+        for (Map<String, String> row : rows) {
+            producerService.sendRawFromFile(row, topic, resources.assetsDirectory);
+        }
     }
 
     // =========================================================================
@@ -63,9 +67,11 @@ public class ActionStepDefinition {
 
     @When("record from file based on schema is sent")
     public void whenRecordFromFileBasedOnSchemaIsSent(DataTable dataTable) {
-        Map<String, String> row = DataTableUtils.firstRow(dataTable);
-        Topic topic = resolveTopic(row);
-        producerService.sendAvroFromFile(row, topic, resources.assetsDirectory);
+        List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
+        Topic topic = resolveAndAssertSingleTopic(rows);
+        for (Map<String, String> row : rows) {
+            producerService.sendAvroFromFile(row, topic, resources.assetsDirectory);
+        }
     }
 
     // =========================================================================
@@ -110,13 +116,15 @@ public class ActionStepDefinition {
     }
 
     private void executeScript(DataTable dataTable) throws IOException, InterruptedException {
-        Map<String, String> row = DataTableUtils.firstRow(dataTable);
-        String scriptPath = DataTableUtils.getString(row, DATA_TABLE_SCRIPT_PATH);
-        String scriptArgs = DataTableUtils.getString(row, DATA_TABLE_SCRIPT_ARGS);
+        List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
+        for (Map<String, String> row : rows) {
+            String scriptPath = DataTableUtils.getString(row, DATA_TABLE_SCRIPT_PATH);
+            String scriptArgs = DataTableUtils.getString(row, DATA_TABLE_SCRIPT_ARGS);
 
-        int exitCode = scriptService.execute(scriptPath, scriptArgs);
-        if (exitCode != 0) {
-            throw new AssertionError("Script '" + scriptPath + "' exited with non-zero exit code: " + exitCode);
+            int exitCode = scriptService.execute(scriptPath, scriptArgs);
+            if (exitCode != 0) {
+                throw new AssertionError("Script '" + scriptPath + "' exited with non-zero exit code: " + exitCode);
+            }
         }
     }
 
@@ -131,5 +139,15 @@ public class ActionStepDefinition {
         }
         String name = DataTableUtils.getString(row, DATA_TABLE_TOPIC_NAME);
         return resources.topics.getOrThrow(name);
+    }
+
+    /**
+     * Resolves the topic for every row of a multi-row producer DataTable and asserts they all target the same physical
+     * topic — a DataTable driving a single producer step is only allowed to reference one topic. See
+     * {@link TopicUtils#assertSingleTopic(List)}.
+     */
+    private Topic resolveAndAssertSingleTopic(List<Map<String, String>> rows) {
+        List<Topic> topics = rows.stream().map(this::resolveTopic).toList();
+        return TopicUtils.assertSingleTopic(topics);
     }
 }

@@ -29,12 +29,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.generic.GenericRecord;
 
@@ -46,6 +41,11 @@ import org.apache.avro.generic.GenericRecord;
  *
  * <p>All delta-time conversions are handled here: DataTable {@code consumerDeltaTime} is in <b>seconds</b> → multiplied
  * by 1000 before setting {@link ConsumerContext#getConsumerDeltaTime()} which expects <b>milliseconds</b>.
+ *
+ * <p><b>Reference timestamp pinning:</b> every {@code validate*} call captures {@code System.currentTimeMillis()} once
+ * via {@link #now()} and passes it as {@link ConsumerContext#getReferenceTimestamp()}. This pins the "now" used by
+ * {@code KafkaRecordFetcher.calculateDeltaTime()} to the moment the step started, instead of recomputing it live at
+ * seek time — avoiding clock-drift/offset-skew across a slow-running step or a chain of {@code Then} steps.
  *
  * <p>This service never imports raw {@code org.apache.kafka.*} classes directly — it delegates client creation entirely
  * to {@link KafkaClientFactory}.
@@ -70,6 +70,23 @@ public class ConsumerValidationService {
      * @param assets optional assets directory for resolving relative paths
      */
     public void validateRawFromFile(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
+        validateRawFromFile(row, topic, assets, null);
+    }
+
+    /**
+     * Validates a single raw record against a file, pinning "now" to the given {@code referenceTimestamp} instead of
+     * the live clock.
+     *
+     * <p>Used by multi-row consumer steps (all rows targeting the same topic) so every row in the step shares the exact
+     * same delta-time seek window — avoiding clock-drift/offset-skew across rows.
+     *
+     * @param row DataTable row from the step
+     * @param topic the resolved OUTPUT topic
+     * @param assets optional assets directory for resolving relative paths
+     * @param referenceTimestamp epoch ms to pin as "now", or {@code null} to use the live clock
+     */
+    public void validateRawFromFile(
+            Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets, Long referenceTimestamp) {
 
         String file = resolve(assets, getString(row, DATA_TABLE_FILE));
         String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
@@ -84,6 +101,7 @@ public class ConsumerValidationService {
                 .expectedRecordKey(expectedKey)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
+                .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
         execute(ctx, new RawKafkaConsumer(ctx), readTimeout);
@@ -97,6 +115,16 @@ public class ConsumerValidationService {
      * @param assets optional assets directory
      */
     public void validateRawFields(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
+        validateRawFields(row, topic, assets, null);
+    }
+
+    /**
+     * Validates a single raw record using positional field matching, pinning "now" to {@code referenceTimestamp}.
+     *
+     * @see #validateRawFromFile(Map, Topic, KtestifyAssetsDirectory, Long)
+     */
+    public void validateRawFields(
+            Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets, Long referenceTimestamp) {
         String file = resolve(assets, getString(row, DATA_TABLE_FILE));
         String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         Integer line = getInt(row, DATA_TABLE_FIELD_TO_MATCH_LINE);
@@ -116,6 +144,7 @@ public class ConsumerValidationService {
                 .expectedRecordKey(expectedKey)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
+                .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
         // FieldsRecordMatcher reads posDescriptor via matchKey — inject via a custom consumer
@@ -145,6 +174,17 @@ public class ConsumerValidationService {
      * @param assets optional assets directory
      */
     public void validateRawXml(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
+        validateRawXml(row, topic, assets, null);
+    }
+
+    /**
+     * Validates a single raw record against an XML file with optional element exclusions, pinning "now" to
+     * {@code referenceTimestamp}.
+     *
+     * @see #validateRawFromFile(Map, Topic, KtestifyAssetsDirectory, Long)
+     */
+    public void validateRawXml(
+            Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets, Long referenceTimestamp) {
         String file = resolve(assets, getString(row, DATA_TABLE_FILE));
         String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         List<String> excluded = splitComma(getString(row, DATA_TABLE_FIELD_TO_MATCH_EXCLUDE_ELEMENTS));
@@ -160,6 +200,7 @@ public class ConsumerValidationService {
                 .excludedFields(excluded)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
+                .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
         execute(ctx, new RawKafkaConsumer(ctx), readTimeout);
@@ -173,6 +214,17 @@ public class ConsumerValidationService {
      * @param assets optional assets directory
      */
     public void validateRawXPath(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
+        validateRawXPath(row, topic, assets, null);
+    }
+
+    /**
+     * Validates a single raw record against an XML file using XPath expressions, pinning "now" to
+     * {@code referenceTimestamp}.
+     *
+     * @see #validateRawFromFile(Map, Topic, KtestifyAssetsDirectory, Long)
+     */
+    public void validateRawXPath(
+            Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets, Long referenceTimestamp) {
         String file = resolve(assets, getString(row, DATA_TABLE_FILE));
         String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         List<String> xpaths = splitComma(getString(row, DATA_TABLE_FIELD_TO_MATCH_XPATH));
@@ -188,6 +240,7 @@ public class ConsumerValidationService {
                 .excludedFields(xpaths) // XPathRecordMatcher reads expressions from excludedFields
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
+                .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
         execute(ctx, new RawKafkaConsumer(ctx), readTimeout);
@@ -215,6 +268,7 @@ public class ConsumerValidationService {
                 .batchSize(expectedCount)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
+                .referenceTimestamp(now())
                 .build();
 
         execute(ctx, new RawKafkaConsumer(ctx), readTimeout);
@@ -225,6 +279,15 @@ public class ConsumerValidationService {
      * {@link io.github.ktestify.match.impl.NoOpRecordMatcher} — if a record arrives the step fails; timeout means pass.
      */
     public void validateNoRecord(Map<String, String> row, Topic topic) {
+        validateNoRecord(row, topic, null);
+    }
+
+    /**
+     * Validates that a record does <em>not</em> appear, pinning "now" to {@code referenceTimestamp}.
+     *
+     * @see #validateRawFromFile(Map, Topic, KtestifyAssetsDirectory, Long)
+     */
+    public void validateNoRecord(Map<String, String> row, Topic topic, Long referenceTimestamp) {
         String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         Long readTimeout = getReadTimeoutMs(row);
         Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
@@ -235,6 +298,7 @@ public class ConsumerValidationService {
                 .expectedRecordKey(expectedKey)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
+                .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
         // A record appearing within the timeout = test failure
@@ -254,6 +318,15 @@ public class ConsumerValidationService {
 
     /** Validates that a record <em>does</em> appear (positive watcher). */
     public void validateRecordExists(Map<String, String> row, Topic topic) {
+        validateRecordExists(row, topic, null);
+    }
+
+    /**
+     * Validates that a record <em>does</em> appear, pinning "now" to {@code referenceTimestamp}.
+     *
+     * @see #validateRawFromFile(Map, Topic, KtestifyAssetsDirectory, Long)
+     */
+    public void validateRecordExists(Map<String, String> row, Topic topic, Long referenceTimestamp) {
         String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         Long readTimeout = getReadTimeoutMs(row);
         Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
@@ -264,6 +337,7 @@ public class ConsumerValidationService {
                 .expectedRecordKey(expectedKey)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
+                .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
         execute(ctx, new RawKafkaConsumer(ctx), readTimeout);
@@ -278,6 +352,15 @@ public class ConsumerValidationService {
      * @param topic the resolved OUTPUT topic
      */
     public void validateRawKeyOnly(Map<String, String> row, Topic topic) {
+        validateRawKeyOnly(row, topic, null);
+    }
+
+    /**
+     * Validates the key of a single raw record, pinning "now" to {@code referenceTimestamp}.
+     *
+     * @see #validateRawFromFile(Map, Topic, KtestifyAssetsDirectory, Long)
+     */
+    public void validateRawKeyOnly(Map<String, String> row, Topic topic, Long referenceTimestamp) {
         String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         Long readTimeout = getReadTimeoutMs(row);
         Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
@@ -289,6 +372,7 @@ public class ConsumerValidationService {
                 .expectedRecordKey(expectedKey)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
+                .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
         io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
@@ -319,6 +403,16 @@ public class ConsumerValidationService {
      * @param assets optional assets directory
      */
     public void validateRawKeyValue(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
+        validateRawKeyValue(row, topic, assets, null);
+    }
+
+    /**
+     * Validates both the key and value of a single raw record, pinning "now" to {@code referenceTimestamp}.
+     *
+     * @see #validateRawFromFile(Map, Topic, KtestifyAssetsDirectory, Long)
+     */
+    public void validateRawKeyValue(
+            Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets, Long referenceTimestamp) {
         String file = resolve(assets, getString(row, DATA_TABLE_FILE));
         String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         Long readTimeout = getReadTimeoutMs(row);
@@ -332,6 +426,7 @@ public class ConsumerValidationService {
                 .expectedRecordKey(expectedKey)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
+                .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
         io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
@@ -364,6 +459,16 @@ public class ConsumerValidationService {
      * @param assets optional assets directory
      */
     public void validateAvroFromFile(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
+        validateAvroFromFile(row, topic, assets, null);
+    }
+
+    /**
+     * Validates a single Avro record against a JSON file, pinning "now" to {@code referenceTimestamp}.
+     *
+     * @see #validateRawFromFile(Map, Topic, KtestifyAssetsDirectory, Long)
+     */
+    public void validateAvroFromFile(
+            Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets, Long referenceTimestamp) {
         String file = resolve(assets, getString(row, DATA_TABLE_FILE));
         List<String> excluded = splitComma(getString(row, DATA_TABLE_FIELD_TO_MATCH_EXCLUDED_KEYS));
         Long readTimeout = getReadTimeoutMs(row);
@@ -377,6 +482,7 @@ public class ConsumerValidationService {
                 .excludedFields(excluded)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
+                .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
         execute(ctx, new AvroKafkaConsumer(ctx), readTimeout);
@@ -389,6 +495,15 @@ public class ConsumerValidationService {
      * @param topic the resolved OUTPUT topic
      */
     public void validateAvroFieldValue(Map<String, String> row, Topic topic) {
+        validateAvroFieldValue(row, topic, null);
+    }
+
+    /**
+     * Validates a single Avro record field against an inline key/value, pinning "now" to {@code referenceTimestamp}.
+     *
+     * @see #validateRawFromFile(Map, Topic, KtestifyAssetsDirectory, Long)
+     */
+    public void validateAvroFieldValue(Map<String, String> row, Topic topic, Long referenceTimestamp) {
         String key = getString(row, DATA_TABLE_FIELD_TO_MATCH_KEY);
         String value = getString(row, DATA_TABLE_FIELD_TO_MATCH_VALUE);
         Long readTimeout = getReadTimeoutMs(row);
@@ -400,6 +515,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_FIELDS_TO_MATCH)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
+                .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
         io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
@@ -444,6 +560,7 @@ public class ConsumerValidationService {
                 .batchSize(expectedCount)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
+                .referenceTimestamp(now())
                 .build();
 
         execute(ctx, new AvroKafkaConsumer(ctx), readTimeout);
@@ -456,6 +573,15 @@ public class ConsumerValidationService {
      * @param topic the resolved OUTPUT topic
      */
     public void validateAvroKeyOnly(Map<String, String> row, Topic topic) {
+        validateAvroKeyOnly(row, topic, null);
+    }
+
+    /**
+     * Validates the key of a single Avro record, pinning "now" to {@code referenceTimestamp}.
+     *
+     * @see #validateRawFromFile(Map, Topic, KtestifyAssetsDirectory, Long)
+     */
+    public void validateAvroKeyOnly(Map<String, String> row, Topic topic, Long referenceTimestamp) {
         String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         Long readTimeout = getReadTimeoutMs(row);
         Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
@@ -467,6 +593,7 @@ public class ConsumerValidationService {
                 .expectedRecordKey(expectedKey)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
+                .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
         io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
@@ -569,5 +696,14 @@ public class ConsumerValidationService {
 
     private static List<String> splitAndResolve(KtestifyAssetsDirectory assets, String commaSeparated) {
         return splitComma(commaSeparated).stream().map(f -> resolve(assets, f)).toList();
+    }
+
+    /**
+     * Captures "now" once per {@code validate*} call, to be pinned onto
+     * {@link ConsumerContext#getReferenceTimestamp()}. Extracted as a method (rather than inlined) so it is easy to
+     * stub/override in tests.
+     */
+    private static long now() {
+        return System.currentTimeMillis();
     }
 }
