@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### ✨ Features
+
+- Added centralised actions (#37) — [@nil-malh](https://github.com/nil-malh) ([#37](https://github.com/ktestify/ktestify-cucumber/pull/37))
+
+- Implement multi-row support for producer and consumer steps wit… (#40) — [@nil-malh](https://github.com/nil-malh) ([#40](https://github.com/ktestify/ktestify-cucumber/pull/40))
+
+
+### ⬆️ Dependency Updates
+
+- Bump io.cucumber:datatable in the cucumber group (#39) *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot]) ([#39](https://github.com/ktestify/ktestify-cucumber/pull/39))
+
+
 ## [1.0.5] — 2026-07-07
 
 ### 🐛 Bug Fixes
