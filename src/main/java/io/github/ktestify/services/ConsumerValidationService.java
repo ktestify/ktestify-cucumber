@@ -15,6 +15,9 @@
  */
 package io.github.ktestify.services;
 
+import static io.github.ktestify.match.RecordMatcherFactory.*;
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
+
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.exceptions.ConsumerException;
 import io.github.ktestify.io.kafka.ConsumerContext;
@@ -22,17 +25,13 @@ import io.github.ktestify.io.kafka.KafkaClientFactory;
 import io.github.ktestify.io.kafka.impl.AvroKafkaConsumer;
 import io.github.ktestify.io.kafka.impl.RawKafkaConsumer;
 import io.github.ktestify.models.Topic;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.avro.generic.GenericRecord;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
-
-import static io.github.ktestify.match.RecordMatcherFactory.*;
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.avro.generic.GenericRecord;
 
 /**
  * Orchestrates Kafka consumer validation for Cucumber step definitions.
@@ -78,8 +77,8 @@ public class ConsumerValidationService {
      * Validates a single raw record against a file, pinning "now" to the given {@code referenceTimestamp} instead of
      * the live clock.
      *
-     * <p>Used by multi-row consumer steps (all rows targeting the same topic) so every row in the step shares the
-     * exact same delta-time seek window — avoiding clock-drift/offset-skew across rows.
+     * <p>Used by multi-row consumer steps (all rows targeting the same topic) so every row in the step shares the exact
+     * same delta-time seek window — avoiding clock-drift/offset-skew across rows.
      *
      * @param row DataTable row from the step
      * @param topic the resolved OUTPUT topic
@@ -700,8 +699,9 @@ public class ConsumerValidationService {
     }
 
     /**
-     * Captures "now" once per {@code validate*} call, to be pinned onto {@link ConsumerContext#getReferenceTimestamp()}.
-     * Extracted as a method (rather than inlined) so it is easy to stub/override in tests.
+     * Captures "now" once per {@code validate*} call, to be pinned onto
+     * {@link ConsumerContext#getReferenceTimestamp()}. Extracted as a method (rather than inlined) so it is easy to
+     * stub/override in tests.
      */
     private static long now() {
         return System.currentTimeMillis();

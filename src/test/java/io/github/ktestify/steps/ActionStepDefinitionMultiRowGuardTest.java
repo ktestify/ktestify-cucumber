@@ -15,21 +15,19 @@
  */
 package io.github.ktestify.steps;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import io.github.ktestify.exceptions.TopicMismatchException;
 import io.github.ktestify.models.Topic;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for {@link ActionStepDefinition}'s multi-row same-topic guard rail
- * ({@code resolveAndAssertSingleTopic}).
+ * Unit tests for {@link ActionStepDefinition}'s multi-row same-topic guard rail ({@code resolveAndAssertSingleTopic}).
  *
  * <p>These tests exercise only the topic-resolution logic (via reflection), which runs entirely before any Kafka
  * producer is created — no broker is required.
@@ -93,6 +91,3 @@ class ActionStepDefinitionMultiRowGuardTest {
         return (Topic) m.invoke(action, rows);
     }
 }
-
-
-

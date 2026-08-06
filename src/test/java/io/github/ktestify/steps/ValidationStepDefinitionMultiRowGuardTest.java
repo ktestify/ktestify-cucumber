@@ -15,22 +15,21 @@
  */
 package io.github.ktestify.steps;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import io.cucumber.datatable.DataTable;
 import io.cucumber.datatable.DataTableTypeRegistry;
 import io.cucumber.datatable.DataTableTypeRegistryTableConverter;
 import io.github.ktestify.exceptions.TopicMismatchException;
 import io.github.ktestify.models.Topic;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link ValidationStepDefinition}'s guard rails.
@@ -177,8 +176,9 @@ class ValidationStepDefinitionMultiRowGuardTest {
     }
 
     /**
-     * Builds a {@link DataTable} backed by a real {@link DataTableTypeRegistryTableConverter} — {@code DataTable.create}
-     * without a converter cannot perform {@code asMaps()} conversions and throws {@code CucumberDataTableException}.
+     * Builds a {@link DataTable} backed by a real {@link DataTableTypeRegistryTableConverter} —
+     * {@code DataTable.create} without a converter cannot perform {@code asMaps()} conversions and throws
+     * {@code CucumberDataTableException}.
      */
     @SafeVarargs
     private static DataTable buildDataTable(List<String> header, List<String>... rows) {
@@ -190,7 +190,3 @@ class ValidationStepDefinitionMultiRowGuardTest {
         return DataTable.create(all, converter);
     }
 }
-
-
-
-

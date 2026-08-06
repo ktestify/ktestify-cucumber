@@ -15,6 +15,9 @@
  */
 package io.github.ktestify.steps;
 
+import static io.github.ktestify.utils.DataTableUtils.Constants.DATA_TABLE_TOPIC_ALIAS;
+import static io.github.ktestify.utils.DataTableUtils.Constants.DATA_TABLE_TOPIC_NAME;
+
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Then;
@@ -22,13 +25,9 @@ import io.github.ktestify.models.Topic;
 import io.github.ktestify.services.ConsumerValidationService;
 import io.github.ktestify.utils.DataTableUtils;
 import io.github.ktestify.utils.TopicUtils;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.List;
 import java.util.Map;
-
-import static io.github.ktestify.utils.DataTableUtils.Constants.DATA_TABLE_TOPIC_ALIAS;
-import static io.github.ktestify.utils.DataTableUtils.Constants.DATA_TABLE_TOPIC_NAME;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Cucumber {@code @Then} and {@code @And} step definitions for consumer validation.
@@ -239,8 +238,8 @@ public class ValidationStepDefinition {
     // =========================================================================
 
     /**
-     * Resolves the topic for every row of a multi-row assertion DataTable and asserts they all target the same
-     * physical topic. A DataTable driving these steps is only allowed to reference one topic — see
+     * Resolves the topic for every row of a multi-row assertion DataTable and asserts they all target the same physical
+     * topic. A DataTable driving these steps is only allowed to reference one topic — see
      * {@link TopicUtils#assertSingleTopic(List)}. Throws before any consumer call is made.
      */
     private Topic resolveAndAssertSingleTopic(List<Map<String, String>> rows) {

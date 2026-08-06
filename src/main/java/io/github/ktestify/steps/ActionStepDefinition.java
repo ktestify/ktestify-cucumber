@@ -15,6 +15,8 @@
  */
 package io.github.ktestify.steps;
 
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
+
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.When;
@@ -24,13 +26,10 @@ import io.github.ktestify.script.ScriptService;
 import io.github.ktestify.services.ProducerValidationService;
 import io.github.ktestify.utils.DataTableUtils;
 import io.github.ktestify.utils.TopicUtils;
-import lombok.extern.slf4j.Slf4j;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Cucumber {@code @When} (and {@code @And}) step definitions for actions: producing records, sending files, executing
@@ -143,8 +142,8 @@ public class ActionStepDefinition {
     }
 
     /**
-     * Resolves the topic for every row of a multi-row producer DataTable and asserts they all target the same
-     * physical topic — a DataTable driving a single producer step is only allowed to reference one topic. See
+     * Resolves the topic for every row of a multi-row producer DataTable and asserts they all target the same physical
+     * topic — a DataTable driving a single producer step is only allowed to reference one topic. See
      * {@link TopicUtils#assertSingleTopic(List)}.
      */
     private Topic resolveAndAssertSingleTopic(List<Map<String, String>> rows) {
