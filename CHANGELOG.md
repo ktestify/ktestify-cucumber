@@ -2,7 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.1.0] — 2026-08-06
+
 ### ✨ Features
 
 - Added centralised actions (#37) — [@nil-malh](https://github.com/nil-malh) ([#37](https://github.com/ktestify/ktestify-cucumber/pull/37))
