@@ -9,6 +9,8 @@ All notable changes to this project will be documented in this file.
 
 - Bump io.cucumber:datatable in the cucumber group (#42) *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot]) ([#42](https://github.com/ktestify/ktestify-cucumber/pull/42))
 
+- Bump org.apache.avro:avro from 1.12.1 to 1.12.2 (#43) *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot]) ([#43](https://github.com/ktestify/ktestify-cucumber/pull/43))
+
 
 ## [1.1.0] — 2026-08-06
 
