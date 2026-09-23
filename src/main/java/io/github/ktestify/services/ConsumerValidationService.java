@@ -15,9 +15,6 @@
  */
 package io.github.ktestify.services;
 
-import static io.github.ktestify.match.RecordMatcherFactory.*;
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
-
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.exceptions.ConsumerException;
 import io.github.ktestify.io.kafka.ConsumerContext;
@@ -25,13 +22,14 @@ import io.github.ktestify.io.kafka.KafkaClientFactory;
 import io.github.ktestify.io.kafka.impl.AvroKafkaConsumer;
 import io.github.ktestify.io.kafka.impl.RawKafkaConsumer;
 import io.github.ktestify.models.Topic;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.generic.GenericRecord;
+
+import java.util.*;
+import java.util.concurrent.*;
+
+import static io.github.ktestify.match.RecordMatcherFactory.*;
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
 
 /**
  * Orchestrates Kafka consumer validation for Cucumber step definitions.
@@ -39,15 +37,15 @@ import org.apache.avro.generic.GenericRecord;
  * <p>Builds a typed {@link ConsumerContext}, submits the consumer to an {@link ExecutorService}, and applies a
  * two-layer timeout (inner: consumer poll; outer: executor guard with {@code BUFFER_TIME} ms extra.
  *
- * <p>All delta-time conversions are handled here: DataTable {@code consumerDeltaTime} is in <b>seconds</b> → multiplied
+ * <p>All delta-time conversions are handled here: DataTable {@code consumerDeltaTime} is in <b>seconds</b> -> multiplied
  * by 1000 before setting {@link ConsumerContext#getConsumerDeltaTime()} which expects <b>milliseconds</b>.
  *
  * <p><b>Reference timestamp pinning:</b> every {@code validate*} call captures {@code System.currentTimeMillis()} once
  * via {@link #now()} and passes it as {@link ConsumerContext#getReferenceTimestamp()}. This pins the "now" used by
  * {@code KafkaRecordFetcher.calculateDeltaTime()} to the moment the step started, instead of recomputing it live at
- * seek time — avoiding clock-drift/offset-skew across a slow-running step or a chain of {@code Then} steps.
+ * seek time, avoiding clock-drift/offset-skew across a slow-running step or a chain of {@code Then} steps.
  *
- * <p>This service never imports raw {@code org.apache.kafka.*} classes directly — it delegates client creation entirely
+ * <p>This service never imports raw {@code org.apache.kafka.*} classes directly. It delegates client creation entirely
  * to {@link KafkaClientFactory}.
  */
 @Slf4j
@@ -78,7 +76,7 @@ public class ConsumerValidationService {
      * the live clock.
      *
      * <p>Used by multi-row consumer steps (all rows targeting the same topic) so every row in the step shares the exact
-     * same delta-time seek window — avoiding clock-drift/offset-skew across rows.
+     * same delta-time seek window, avoiding clock-drift/offset-skew across rows.
      *
      * @param row DataTable row from the step
      * @param topic the resolved OUTPUT topic
@@ -147,7 +145,7 @@ public class ConsumerValidationService {
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
-        // FieldsRecordMatcher reads posDescriptor via matchKey — inject via a custom consumer
+        // FieldsRecordMatcher reads posDescriptor via matchKey, inject via a custom consumer
         io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
                 .matchMethod(METHOD_FIELDS_TO_MATCH)
                 .matchFilePath(file)
@@ -276,7 +274,7 @@ public class ConsumerValidationService {
 
     /**
      * Validates that a record does <em>not</em> appear (watcher / negative assertion). Uses
-     * {@link io.github.ktestify.match.impl.NoOpRecordMatcher} — if a record arrives the step fails; timeout means pass.
+     * {@link io.github.ktestify.match.impl.NoOpRecordMatcher}. If a record arrives the step fails; timeout means pass.
      */
     public void validateNoRecord(Map<String, String> row, Topic topic) {
         validateNoRecord(row, topic, null);
@@ -501,11 +499,20 @@ public class ConsumerValidationService {
     /**
      * Validates a single Avro record field against an inline key/value, pinning "now" to {@code referenceTimestamp}.
      *
+     * <p>Supports two DataTable column shapes:
+     * <ul>
+     *   <li><b>Single field:</b> {@code key} / {@code value} columns (backward compatible).</li>
+     *   <li><b>Multiple fields:</b> {@code keys} / {@code values} columns, semicolon-separated.
+     *       Example: {@code keys = "batchId;taskId"}, {@code values = "0;99"} validates that
+     *       {@code batchId == 0} <em>and</em> {@code taskId == 99}.</li>
+     * </ul>
+     *
+     * @param row DataTable row
+     * @param topic the resolved OUTPUT topic
+     * @param referenceTimestamp epoch ms to pin as "now", or {@code null} to use the live clock
      * @see #validateRawFromFile(Map, Topic, KtestifyAssetsDirectory, Long)
      */
     public void validateAvroFieldValue(Map<String, String> row, Topic topic, Long referenceTimestamp) {
-        String key = getString(row, DATA_TABLE_FIELD_TO_MATCH_KEY);
-        String value = getString(row, DATA_TABLE_FIELD_TO_MATCH_VALUE);
         Long readTimeout = getReadTimeoutMs(row);
         Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
 
@@ -518,12 +525,7 @@ public class ConsumerValidationService {
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
-        io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
-                .matchMethod(METHOD_FIELDS_TO_MATCH)
-                .matchKey(key)
-                .matchValue(value)
-                .strictMatching(false)
-                .build();
+        io.github.ktestify.match.MatchContext matchCtx = buildAvroFieldValueMatchContext(row);
 
         executeWithContext(
                 ctx,
@@ -534,6 +536,71 @@ public class ConsumerValidationService {
                     }
                 },
                 readTimeout);
+    }
+
+    /**
+     * Builds the {@link io.github.ktestify.match.MatchContext} for Avro field-value matching.
+     *
+     * <p>If the {@code keys} / {@code values} columns are present, a multi-field {@code matchKeyValues} map is built
+     * by splitting on semicolons. Otherwise, the single {@code key} / {@code value} columns are used for backward
+     * compatibility.
+     *
+     * @param row the DataTable row
+     * @return a {@link io.github.ktestify.match.MatchContext} configured for either single or multi-field matching
+     * @since 1.1.1
+     */
+    private static io.github.ktestify.match.MatchContext buildAvroFieldValueMatchContext(Map<String, String> row) {
+        String keysCol = getString(row, DATA_TABLE_FIELD_TO_MATCH_KEYS);
+        String valuesCol = getString(row, DATA_TABLE_FIELD_TO_MATCH_VALUES);
+
+        if (keysCol != null && valuesCol != null) {
+            Map<String, String> keyValues = parseKeyValuePairs(keysCol, valuesCol);
+            return io.github.ktestify.match.MatchContext.builder()
+                    .matchMethod(METHOD_FIELDS_TO_MATCH)
+                    .matchKeyValues(keyValues)
+                    .strictMatching(false)
+                    .build();
+        }
+
+        String key = getString(row, DATA_TABLE_FIELD_TO_MATCH_KEY);
+        String value = getString(row, DATA_TABLE_FIELD_TO_MATCH_VALUE);
+        return io.github.ktestify.match.MatchContext.builder()
+                .matchMethod(METHOD_FIELDS_TO_MATCH)
+                .matchKey(key)
+                .matchValue(value)
+                .strictMatching(false)
+                .build();
+    }
+
+    /**
+     * Parses semicolon-separated keys and values into an ordered map.
+     *
+     * <p>Example: {@code keys = "batchId;taskId"}, {@code values = "0;99"} produces
+     * {@code {batchId=0, taskId=99}}.
+     *
+     * @param keys semicolon-separated field names
+     * @param values semicolon-separated expected values
+     * @return an ordered map of field name to expected value
+     * @throws IllegalArgumentException if the number of keys and values do not match
+     * @since 1.1.1
+     */
+    private static Map<String, String> parseKeyValuePairs(String keys, String values) {
+        String[] keyArray = keys.split(";");
+        String[] valueArray = values.split(";");
+        if (keyArray.length != valueArray.length) {
+            throw new IllegalArgumentException("The number of keys (" + keyArray.length + ") and values ("
+                    + valueArray.length + ") do not match. Keys: '" + keys + "', values: '" + values + "'.");
+        }
+        Map<String, String> result = new LinkedHashMap<>();
+        for (int i = 0; i < keyArray.length; i++) {
+            String k = keyArray[i].trim();
+            String v = valueArray[i].trim();
+            if (k.isBlank()) {
+                throw new IllegalArgumentException("Key at position " + (i + 1) + " is blank in keys: '" + keys + "'.");
+            }
+            result.put(k, v);
+        }
+        return result;
     }
 
     /**
