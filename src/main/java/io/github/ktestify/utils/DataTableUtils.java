@@ -16,7 +16,6 @@
 package io.github.ktestify.utils;
 
 import io.cucumber.datatable.DataTable;
-
 import java.util.*;
 
 /**
@@ -171,13 +170,14 @@ public final class DataTableUtils {
         public static final String DATA_TABLE_FIELD_TO_MATCH_VALUE = "value";
 
         /**
-         * Multi-field column names for the {@code keys} / {@code values} columns. Used by the
-         * "expected record based on schema should have fields matching from given value" step when multiple
-         * key/value pairs are specified in a single row, separated by semicolons.
+         * Multi-field column names for the {@code keys} / {@code values} columns. Used by the "expected record based on
+         * schema should have fields matching from given value" step when multiple key/value pairs are specified in a
+         * single row, separated by semicolons.
          *
          * @since 1.1.1
          */
         public static final String DATA_TABLE_FIELD_TO_MATCH_KEYS = "keys";
+
         public static final String DATA_TABLE_FIELD_TO_MATCH_VALUES = "values";
 
         public static final String DATA_TABLE_FIELD_TO_MATCH_EXCLUDE_ELEMENTS = "excludedElements";

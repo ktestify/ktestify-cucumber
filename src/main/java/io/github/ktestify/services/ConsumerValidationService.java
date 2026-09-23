@@ -37,8 +37,8 @@ import static io.github.ktestify.utils.DataTableUtils.Constants.*;
  * <p>Builds a typed {@link ConsumerContext}, submits the consumer to an {@link ExecutorService}, and applies a
  * two-layer timeout (inner: consumer poll; outer: executor guard with {@code BUFFER_TIME} ms extra.
  *
- * <p>All delta-time conversions are handled here: DataTable {@code consumerDeltaTime} is in <b>seconds</b> -> multiplied
- * by 1000 before setting {@link ConsumerContext#getConsumerDeltaTime()} which expects <b>milliseconds</b>.
+ * <p>All delta-time conversions are handled here: DataTable {@code consumerDeltaTime} is in <b>seconds</b> ->
+ * multiplied by 1000 before setting {@link ConsumerContext#getConsumerDeltaTime()} which expects <b>milliseconds</b>.
  *
  * <p><b>Reference timestamp pinning:</b> every {@code validate*} call captures {@code System.currentTimeMillis()} once
  * via {@link #now()} and passes it as {@link ConsumerContext#getReferenceTimestamp()}. This pins the "now" used by
@@ -500,11 +500,12 @@ public class ConsumerValidationService {
      * Validates a single Avro record field against an inline key/value, pinning "now" to {@code referenceTimestamp}.
      *
      * <p>Supports two DataTable column shapes:
+     *
      * <ul>
-     *   <li><b>Single field:</b> {@code key} / {@code value} columns (backward compatible).</li>
-     *   <li><b>Multiple fields:</b> {@code keys} / {@code values} columns, semicolon-separated.
-     *       Example: {@code keys = "batchId;taskId"}, {@code values = "0;99"} validates that
-     *       {@code batchId == 0} <em>and</em> {@code taskId == 99}.</li>
+     *   <li><b>Single field:</b> {@code key} / {@code value} columns (backward compatible).
+     *   <li><b>Multiple fields:</b> {@code keys} / {@code values} columns, semicolon-separated. Example: {@code keys =
+     *       "batchId;taskId"}, {@code values = "0;99"} validates that {@code batchId == 0} <em>and</em> {@code taskId
+     *       == 99}.
      * </ul>
      *
      * @param row DataTable row
@@ -541,8 +542,8 @@ public class ConsumerValidationService {
     /**
      * Builds the {@link io.github.ktestify.match.MatchContext} for Avro field-value matching.
      *
-     * <p>If the {@code keys} / {@code values} columns are present, a multi-field {@code matchKeyValues} map is built
-     * by splitting on semicolons. Otherwise, the single {@code key} / {@code value} columns are used for backward
+     * <p>If the {@code keys} / {@code values} columns are present, a multi-field {@code matchKeyValues} map is built by
+     * splitting on semicolons. Otherwise, the single {@code key} / {@code value} columns are used for backward
      * compatibility.
      *
      * @param row the DataTable row
@@ -575,8 +576,7 @@ public class ConsumerValidationService {
     /**
      * Parses semicolon-separated keys and values into an ordered map.
      *
-     * <p>Example: {@code keys = "batchId;taskId"}, {@code values = "0;99"} produces
-     * {@code {batchId=0, taskId=99}}.
+     * <p>Example: {@code keys = "batchId;taskId"}, {@code values = "0;99"} produces {@code {batchId=0, taskId=99}}.
      *
      * @param keys semicolon-separated field names
      * @param values semicolon-separated expected values
