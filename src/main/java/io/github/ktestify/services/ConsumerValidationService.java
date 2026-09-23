@@ -15,6 +15,9 @@
  */
 package io.github.ktestify.services;
 
+import static io.github.ktestify.match.RecordMatcherFactory.*;
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
+
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.exceptions.ConsumerException;
 import io.github.ktestify.io.kafka.ConsumerContext;
@@ -22,14 +25,10 @@ import io.github.ktestify.io.kafka.KafkaClientFactory;
 import io.github.ktestify.io.kafka.impl.AvroKafkaConsumer;
 import io.github.ktestify.io.kafka.impl.RawKafkaConsumer;
 import io.github.ktestify.models.Topic;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.avro.generic.GenericRecord;
-
 import java.util.*;
 import java.util.concurrent.*;
-
-import static io.github.ktestify.match.RecordMatcherFactory.*;
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.avro.generic.GenericRecord;
 
 /**
  * Orchestrates Kafka consumer validation for Cucumber step definitions.
