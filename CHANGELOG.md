@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### ⬆️ Dependency Updates
+
+- Bump io.github.ktestify:ktestify-core from 1.1.0 to 1.1.2 (#41) *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot]) ([#41](https://github.com/ktestify/ktestify-cucumber/pull/41))
+
+- Bump io.cucumber:datatable in the cucumber group (#42) *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot]) ([#42](https://github.com/ktestify/ktestify-cucumber/pull/42))
+
+- Bump org.apache.avro:avro from 1.12.1 to 1.12.2 (#43) *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot]) ([#43](https://github.com/ktestify/ktestify-cucumber/pull/43))
+
+- Bump io.cucumber:datatable in the cucumber group (#45) *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot]) ([#45](https://github.com/ktestify/ktestify-cucumber/pull/45))
+
+- Bump io.github.ktestify:ktestify-parent from 1.0.2 to 1.0.3 (#48) *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot]) ([#48](https://github.com/ktestify/ktestify-cucumber/pull/48))
+
+
+## [1.1.0] — 2026-08-06
+
+### ✨ Features
+
+- Added centralised actions (#37) — [@nil-malh](https://github.com/nil-malh) ([#37](https://github.com/ktestify/ktestify-cucumber/pull/37))
+
+- Implement multi-row support for producer and consumer steps wit… (#40) — [@nil-malh](https://github.com/nil-malh) ([#40](https://github.com/ktestify/ktestify-cucumber/pull/40))
+
+
+### ⬆️ Dependency Updates
+
+- Bump io.cucumber:datatable in the cucumber group (#39) *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot]) ([#39](https://github.com/ktestify/ktestify-cucumber/pull/39))
+
+
 ## [1.0.5] — 2026-07-07
 
 ### 🐛 Bug Fixes

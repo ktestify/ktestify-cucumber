@@ -4,10 +4,10 @@
     <parent>
         <groupId>io.github.ktestify</groupId>
         <artifactId>ktestify-parent</artifactId>
-        <version>1.0.2</version>
+        <version>1.0.3</version>
     </parent>
     <artifactId>ktestify-cucumber</artifactId>
-    <version>1.0.6-SNAPSHOT</version>
+    <version>1.1.1-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>ktestify-cucumber</name>
     <description>A comprehensive Cucumber Kafka testing framework for integration and end-to-end testing</description>
@@ -45,7 +45,7 @@
         <dependency>
             <groupId>io.github.ktestify</groupId>
             <artifactId>ktestify-core</artifactId>
-            <version>1.1.0</version>
+            <version>1.1.2</version>
         </dependency>
         <dependency>
             <groupId>io.github.ktestify</groupId>
@@ -101,12 +101,12 @@
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>datatable</artifactId>
-            <version>7.34.4</version>
+            <version>7.34.8</version>
         </dependency>
         <dependency>
             <groupId>org.apache.avro</groupId>
             <artifactId>avro</artifactId>
-            <version>1.12.1</version>
+            <version>1.12.2</version>
         </dependency>
         <dependency>
             <groupId>io.github.nil-malh</groupId>
