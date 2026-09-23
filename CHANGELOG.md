@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 
 - Bump io.cucumber:datatable in the cucumber group (#45) *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot]) ([#45](https://github.com/ktestify/ktestify-cucumber/pull/45))
 
+- Bump io.github.ktestify:ktestify-parent from 1.0.2 to 1.0.3 (#48) *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot]) ([#48](https://github.com/ktestify/ktestify-cucumber/pull/48))
+
 
 ## [1.1.0] — 2026-08-06
 
