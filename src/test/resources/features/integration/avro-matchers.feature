@@ -5,6 +5,7 @@ Feature: Avro record matcher coverage
   #   - AvroFileRecordMatcher   (validateAvroFromFile — no exclusions)
   #   - AvroFileRecordMatcher   (validateAvroFromFile — with excludedKeys)
   #   - AvroFieldsRecordMatcher (validateAvroFieldValue — inline key/value assertion)
+  #   - AvroFieldsRecordMatcher (validateAvroFieldValue — multi-field keys/values assertion)
   #   - AvroKeyRecordMatcher    (validateAvroKeyOnly — key-only assertion)
   #   - Batch Avro              (validateAvroBatch — two records by index)
   #
@@ -76,6 +77,18 @@ Feature: Avro record matcher coverage
       | topicAlias | key      | value | consumerReadTimeout | consumerDeltaTime |
       | avro-out   | currency | USD   | 20                  | 60                |
 
+  # ── AvroFieldsRecordMatcher — multi-field keys/values ────────────────────
+
+  @avroFieldValue
+  Scenario: Avro record has multiple expected field values
+    When record from file based on schema is sent
+      | topicAlias | file                 | schemaName | recordKey      |
+      | avro-in    | send-order-avro.json | Order      | avro-field-003 |
+
+    Then expected record based on schema should have fields matching from given value
+      | topicAlias | keys          | values         | consumerReadTimeout | consumerDeltaTime |
+      | avro-out   | status;amount | PENDING;299.5  | 20                  | 60                |
+
   # ── AvroKeyRecordMatcher — key-only assertion ─────────────────────────────
 
   @avroKeyMatch
@@ -118,5 +131,3 @@ Feature: Avro record matcher coverage
     Then expected records from files based on schema
       | topicAlias | expectedRecordsCount | files                                                             | excludedKeys | consumerReadTimeout | consumerDeltaTime |
       | avro-out   | 2                    | integration/avro-expected-1.json,integration/avro-expected-2.json | createdAt    | 30                  | 60                |
-
-
