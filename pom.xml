@@ -58,6 +58,11 @@
             <version>0.1.1</version>
         </dependency>
         <dependency>
+            <groupId>io.github.ktestify</groupId>
+            <artifactId>ktestify-plugin-http</artifactId>
+            <version>0.1.0</version>
+        </dependency>
+        <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
         </dependency>
