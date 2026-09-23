@@ -4,7 +4,7 @@
     <parent>
         <groupId>io.github.ktestify</groupId>
         <artifactId>ktestify-parent</artifactId>
-        <version>1.0.2</version>
+        <version>1.0.3</version>
     </parent>
     <artifactId>ktestify-cucumber</artifactId>
     <version>1.1.1-SNAPSHOT</version>
