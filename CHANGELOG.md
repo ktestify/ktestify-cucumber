@@ -2,7 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.2.0] — 2026-09-29
+
 ### ⬆️ Dependency Updates
 
 - Bump io.github.ktestify:ktestify-core from 1.1.0 to 1.1.2 (#41) *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot]) ([#41](https://github.com/ktestify/ktestify-cucumber/pull/41))
