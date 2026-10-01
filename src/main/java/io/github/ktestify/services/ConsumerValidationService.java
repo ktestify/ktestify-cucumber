@@ -15,20 +15,22 @@
  */
 package io.github.ktestify.services;
 
-import static io.github.ktestify.match.RecordMatcherFactory.*;
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
-
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.exceptions.ConsumerException;
 import io.github.ktestify.io.kafka.ConsumerContext;
 import io.github.ktestify.io.kafka.KafkaClientFactory;
 import io.github.ktestify.io.kafka.impl.AvroKafkaConsumer;
 import io.github.ktestify.io.kafka.impl.RawKafkaConsumer;
+import io.github.ktestify.match.KeyMatchStrategy;
 import io.github.ktestify.models.Topic;
-import java.util.*;
-import java.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.generic.GenericRecord;
+
+import java.util.*;
+import java.util.concurrent.*;
+
+import static io.github.ktestify.match.RecordMatcherFactory.*;
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
 
 /**
  * Orchestrates Kafka consumer validation for Cucumber step definitions.
@@ -96,6 +98,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_MATCH_FILE)
                 .matchFilePath(file)
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
@@ -139,6 +142,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_FIELDS_TO_MATCH)
                 .matchFilePath(file)
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
@@ -194,6 +198,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_MATCH_XML)
                 .matchFilePath(file)
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .excludedFields(excluded)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
@@ -234,6 +239,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_MATCH_XPATH)
                 .matchFilePath(file)
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .excludedFields(xpaths) // XPathRecordMatcher reads expressions from excludedFields
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
@@ -293,6 +299,7 @@ public class ConsumerValidationService {
                 .topic(topic)
                 .consumer(KafkaClientFactory.createRawConsumer())
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
@@ -332,6 +339,7 @@ public class ConsumerValidationService {
                 .topic(topic)
                 .consumer(KafkaClientFactory.createRawConsumer())
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
@@ -367,6 +375,7 @@ public class ConsumerValidationService {
                 .consumer(KafkaClientFactory.createRawConsumer())
                 .matchMethod(METHOD_RECORD_KEY_MATCH)
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
@@ -375,6 +384,7 @@ public class ConsumerValidationService {
         io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
                 .matchMethod(METHOD_RECORD_KEY_MATCH)
                 .matchKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .strictMatching(false)
                 .build();
 
@@ -421,6 +431,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_MATCH_KEY_FILE)
                 .matchFilePath(file)
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
@@ -430,6 +441,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_MATCH_KEY_FILE)
                 .matchFilePath(file)
                 .matchKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .strictMatching(false)
                 .build();
 
@@ -657,6 +669,7 @@ public class ConsumerValidationService {
                 .consumer(KafkaClientFactory.createAvroConsumer())
                 .matchMethod(METHOD_RECORD_KEY_MATCH)
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
@@ -665,6 +678,7 @@ public class ConsumerValidationService {
         io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
                 .matchMethod(METHOD_RECORD_KEY_MATCH)
                 .matchKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .strictMatching(false)
                 .build();
 
@@ -771,5 +785,18 @@ public class ConsumerValidationService {
      */
     private static long now() {
         return System.currentTimeMillis();
+    }
+
+    /**
+     * Reads the optional {@code keyMatchStrategy} column from the DataTable row and parses it into a
+     * {@link KeyMatchStrategy}. Returns {@link KeyMatchStrategy#EXACT} when the column is absent or unrecognized,
+     * preserving backward compatibility.
+     *
+     * @param row the DataTable row
+     * @return the parsed strategy, never {@code null}
+     * @since 1.0.6
+     */
+    private static KeyMatchStrategy getKeyMatchStrategy(Map<String, String> row) {
+        return KeyMatchStrategy.fromString(getString(row, DATA_TABLE_KEY_MATCH_STRATEGY));
     }
 }

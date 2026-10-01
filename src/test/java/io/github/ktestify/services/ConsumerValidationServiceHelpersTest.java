@@ -15,17 +15,20 @@
  */
 package io.github.ktestify.services;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
+import io.github.ktestify.match.KeyMatchStrategy;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Unit tests for the private helper methods of {@link ConsumerValidationService}.
@@ -141,6 +144,78 @@ class ConsumerValidationServiceHelpersTest {
         }
     }
 
+    // ── getKeyMatchStrategy ────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("getKeyMatchStrategy(row)")
+    class GetKeyMatchStrategy {
+
+        @Test
+        @DisplayName("returns EXACT when keyMatchStrategy column is absent")
+        void exactWhenAbsent() throws Exception {
+            assertEquals(KeyMatchStrategy.EXACT, invokeGetKeyMatchStrategy(Map.of()));
+        }
+
+        @Test
+        @DisplayName("returns EXACT when keyMatchStrategy is blank")
+        void exactWhenBlank() throws Exception {
+            Map<String, String> row = new HashMap<>();
+            row.put("keyMatchStrategy", "   ");
+            assertEquals(KeyMatchStrategy.EXACT, invokeGetKeyMatchStrategy(row));
+        }
+
+        @Test
+        @DisplayName("returns EXACT when value is 'exact'")
+        void parsesExact() throws Exception {
+            assertEquals(KeyMatchStrategy.EXACT, invokeGetKeyMatchStrategy(Map.of("keyMatchStrategy", "exact")));
+        }
+
+        @Test
+        @DisplayName("returns CONTAINS when value is 'contains'")
+        void parsesContains() throws Exception {
+            assertEquals(KeyMatchStrategy.CONTAINS, invokeGetKeyMatchStrategy(Map.of("keyMatchStrategy", "contains")));
+        }
+
+        @Test
+        @DisplayName("returns STARTS_WITH when value is 'starts_with'")
+        void parsesStartsWith() throws Exception {
+            assertEquals(
+                    KeyMatchStrategy.STARTS_WITH, invokeGetKeyMatchStrategy(Map.of("keyMatchStrategy", "starts_with")));
+        }
+
+        @Test
+        @DisplayName("returns STARTS_WITH when value is 'starts-with' (hyphen tolerant)")
+        void parsesStartsWithHyphen() throws Exception {
+            assertEquals(
+                    KeyMatchStrategy.STARTS_WITH, invokeGetKeyMatchStrategy(Map.of("keyMatchStrategy", "starts-with")));
+        }
+
+        @Test
+        @DisplayName("returns ENDS_WITH when value is 'ends_with'")
+        void parsesEndsWith() throws Exception {
+            assertEquals(
+                    KeyMatchStrategy.ENDS_WITH, invokeGetKeyMatchStrategy(Map.of("keyMatchStrategy", "ends_with")));
+        }
+
+        @Test
+        @DisplayName("returns REGEX when value is 'regex'")
+        void parsesRegex() throws Exception {
+            assertEquals(KeyMatchStrategy.REGEX, invokeGetKeyMatchStrategy(Map.of("keyMatchStrategy", "regex")));
+        }
+
+        @Test
+        @DisplayName("returns EXACT for unrecognized value (backward compatibility)")
+        void exactForUnrecognized() throws Exception {
+            assertEquals(KeyMatchStrategy.EXACT, invokeGetKeyMatchStrategy(Map.of("keyMatchStrategy", "fuzzy")));
+        }
+
+        @Test
+        @DisplayName("parses case-insensitively")
+        void parsesCaseInsensitively() throws Exception {
+            assertEquals(KeyMatchStrategy.CONTAINS, invokeGetKeyMatchStrategy(Map.of("keyMatchStrategy", "CONTAINS")));
+        }
+    }
+
     // ── Reflection helpers ────────────────────────────────────────────────────
 
     private static String invokeGetString(Map<String, String> row, String col) throws Exception {
@@ -167,5 +242,11 @@ class ConsumerValidationServiceHelpersTest {
                 "resolve", KtestifyAssetsDirectory.class, String.class);
         m.setAccessible(true);
         return (String) m.invoke(null, assets, path);
+    }
+
+    private static KeyMatchStrategy invokeGetKeyMatchStrategy(Map<String, String> row) throws Exception {
+        Method m = ConsumerValidationService.class.getDeclaredMethod("getKeyMatchStrategy", Map.class);
+        m.setAccessible(true);
+        return (KeyMatchStrategy) m.invoke(null, row);
     }
 }
