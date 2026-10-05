@@ -15,20 +15,22 @@
  */
 package io.github.ktestify.services;
 
-import static io.github.ktestify.match.RecordMatcherFactory.*;
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
-
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.exceptions.ConsumerException;
+import io.github.ktestify.exceptions.FetchTimeoutException;
 import io.github.ktestify.io.kafka.ConsumerContext;
 import io.github.ktestify.io.kafka.KafkaClientFactory;
 import io.github.ktestify.io.kafka.impl.AvroKafkaConsumer;
 import io.github.ktestify.io.kafka.impl.RawKafkaConsumer;
 import io.github.ktestify.models.Topic;
-import java.util.*;
-import java.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.generic.GenericRecord;
+
+import java.util.*;
+import java.util.concurrent.*;
+
+import static io.github.ktestify.match.RecordMatcherFactory.*;
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
 
 /**
  * Orchestrates Kafka consumer validation for Cucumber step definitions.
@@ -273,7 +275,8 @@ public class ConsumerValidationService {
 
     /**
      * Validates that a record does <em>not</em> appear (watcher / negative assertion). Uses
-     * {@link io.github.ktestify.match.impl.NoOpRecordMatcher}. If a record arrives the step fails; timeout means pass.
+     * {@link io.github.ktestify.match.impl.NoOpRecordMatcher}. If a record arrives the step fails; only timeout-like
+     * failures are treated as pass.
      */
     public void validateNoRecord(Map<String, String> row, Topic topic) {
         validateNoRecord(row, topic, null);
@@ -303,9 +306,11 @@ public class ConsumerValidationService {
         try {
             recordArrived = runWithTimeout(new RawKafkaConsumer(ctx), readTimeout);
         } catch (ConsumerException e) {
-            // Timeout = no record found = expected
-            log.info("No record found on topic '{}' as expected.", topic.getNamespacedTopic());
-            return;
+            if (isTimeoutLikeFailure(e)) {
+                log.info("No record found on topic '{}' as expected.", topic.getNamespacedTopic());
+                return;
+            }
+            throw e;
         }
         if (recordArrived) {
             throw new AssertionError(
@@ -704,15 +709,27 @@ public class ConsumerValidationService {
             return Boolean.TRUE.equals(future.get(timeoutMs, TimeUnit.MILLISECONDS));
         } catch (TimeoutException e) {
             future.cancel(true);
-            throw new ConsumerException("Outer timeout exceeded after " + timeoutMs + "ms.");
+            throw new ConsumerException("Outer timeout exceeded after " + timeoutMs + "ms.", e);
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();
             if (cause instanceof ConsumerException ce) throw ce;
-            throw new ConsumerException("Consumer execution failed: " + cause.getMessage());
+            throw new ConsumerException("Consumer execution failed: " + cause.getMessage(), cause);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ConsumerException("Consumer thread interrupted.");
         }
+    }
+
+    /** Returns true for timeout-like failures only (negative watcher expected outcome). */
+    private static boolean isTimeoutLikeFailure(Throwable failure) {
+        Throwable current = failure;
+        while (current != null) {
+            if (current instanceof TimeoutException || current instanceof FetchTimeoutException) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     // =========================================================================

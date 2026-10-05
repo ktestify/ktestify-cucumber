@@ -15,17 +15,21 @@
  */
 package io.github.ktestify.services;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
+import io.github.ktestify.exceptions.ConsumerException;
+import io.github.ktestify.exceptions.FetchTimeoutException;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import java.util.concurrent.TimeoutException;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for the private helper methods of {@link ConsumerValidationService}.
@@ -141,6 +145,36 @@ class ConsumerValidationServiceHelpersTest {
         }
     }
 
+    // ── isTimeoutLikeFailure ──────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("isTimeoutLikeFailure(error)")
+    class TimeoutClassification {
+
+        @Test
+        @DisplayName("returns true for timeout-style messages")
+        void trueForFetchTimeoutType() throws Exception {
+            ConsumerException failure =
+                    new ConsumerException("wrapped", new FetchTimeoutException("Timed out after 1000ms waiting for a record."));
+            assertTrue(invokeIsTimeoutLikeFailure(failure));
+        }
+
+        @Test
+        @DisplayName("returns true when cause chain contains TimeoutException")
+        void trueForTimeoutCause() throws Exception {
+            ConsumerException failure = new ConsumerException(
+                    "Consumer execution failed", new IllegalStateException("wrapped", new TimeoutException("boom")));
+            assertTrue(invokeIsTimeoutLikeFailure(failure));
+        }
+
+        @Test
+        @DisplayName("returns false for non-timeout errors")
+        void falseForNonTimeoutFailure() throws Exception {
+            ConsumerException failure = new ConsumerException("Authentication failed for broker");
+            assertFalse(invokeIsTimeoutLikeFailure(failure));
+        }
+    }
+
     // ── Reflection helpers ────────────────────────────────────────────────────
 
     private static String invokeGetString(Map<String, String> row, String col) throws Exception {
@@ -167,5 +201,11 @@ class ConsumerValidationServiceHelpersTest {
                 "resolve", KtestifyAssetsDirectory.class, String.class);
         m.setAccessible(true);
         return (String) m.invoke(null, assets, path);
+    }
+
+    private static boolean invokeIsTimeoutLikeFailure(Throwable failure) throws Exception {
+        Method m = ConsumerValidationService.class.getDeclaredMethod("isTimeoutLikeFailure", Throwable.class);
+        m.setAccessible(true);
+        return (boolean) m.invoke(null, failure);
     }
 }
