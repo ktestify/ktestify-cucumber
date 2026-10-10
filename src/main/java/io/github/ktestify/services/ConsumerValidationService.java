@@ -725,6 +725,7 @@ public class ConsumerValidationService {
             throw new ConsumerException("Outer timeout exceeded after " + timeoutMs + "ms.", e);
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();
+            if (cause instanceof AssertionError ae) throw ae;
             if (cause instanceof ConsumerException ce) throw ce;
             throw new ConsumerException("Consumer execution failed: " + cause.getMessage(), cause);
         } catch (InterruptedException e) {
