@@ -22,7 +22,7 @@ on:
       run-integration-tests:
         description: "Run integration tests (manual opt-in, useful for PR branches)"
         type: boolean
-        default: false
+        default: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -37,7 +37,7 @@ jobs:
     uses: ktestify/.github/.github/workflows/reusable-maven-ci.yml@main
     with:
       java-version: "25"
-      run-integration-tests: ${{ github.event_name == 'workflow_dispatch' && inputs.run-integration-tests || false }}
+      run-integration-tests: ${{ github.event_name == 'workflow_dispatch' && inputs.run-integration-tests || true }}
       maven-opts: ""
 
 
