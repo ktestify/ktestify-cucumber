@@ -725,13 +725,26 @@ public class ConsumerValidationService {
             throw new ConsumerException("Outer timeout exceeded after " + timeoutMs + "ms.", e);
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();
-            if (cause instanceof AssertionError ae) throw ae;
-            if (cause instanceof ConsumerException ce) throw ce;
+            AssertionError assertion = findCause(cause, AssertionError.class);
+            if (assertion != null) throw assertion;
+
+            ConsumerException consumerException = findCause(cause, ConsumerException.class);
+            if (consumerException != null) throw consumerException;
+
             throw new ConsumerException("Consumer execution failed: " + cause.getMessage(), cause);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ConsumerException("Consumer thread interrupted.");
         }
+    }
+
+    private static <T extends Throwable> T findCause(Throwable throwable, Class<T> type) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (type.isInstance(current)) return type.cast(current);
+            current = current.getCause();
+        }
+        return null;
     }
 
     /** Returns true for timeout-like failures only (negative watcher expected outcome). */
