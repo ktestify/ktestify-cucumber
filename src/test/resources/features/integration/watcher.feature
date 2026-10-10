@@ -77,3 +77,45 @@ Feature: Watcher assertion coverage
       | topicAlias  | topicType | consumerReadTimeout | consumerDeltaTime |
       | watcher-out | raw       | 5                   | 5                 |
 
+  # ── keyMatchStrategy — watcher with non-exact key matching ─────────────────
+
+  @keyStrategy
+  Scenario: Positive watcher — record matches by key prefix using starts_with strategy
+    When record from file is sent
+      | topicAlias | file                        | recordKey      |
+      | watcher-in | integration/m-json-payload.json | watcher-pos-001 |
+
+    And record should appear in topic
+      | topicAlias  | topicType | expectedRecordKey | keyMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+      | watcher-out | raw       | watcher-pos-00    | starts_with      | 15                  | 30                |
+
+  @keyStrategy
+  Scenario: Positive watcher — record matches by key substring using contains strategy
+    When record from file is sent
+      | topicAlias | file                        | recordKey       |
+      | watcher-in | integration/m-json-payload.json | watcher-pos-002 |
+
+    And record should appear in topic
+      | topicAlias  | topicType | expectedRecordKey | keyMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+      | watcher-out | raw       | pos               | contains         | 15                  | 30                |
+
+  @keyStrategy
+  Scenario: Positive watcher — record matches by regex pattern using regex strategy
+    When record from file is sent
+      | topicAlias | file                        | recordKey      |
+      | watcher-in | integration/m-json-payload.json | watcher-pos-001 |
+
+    And record should appear in topic
+      | topicAlias  | topicType | expectedRecordKey   | keyMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+      | watcher-out | raw       | watcher-pos-\d+     | regex            | 15                  | 30                |
+
+  @keyStrategy
+  Scenario: Negative watcher — record key does not match prefix, consumer times out
+    # Produce with key 'watcher-pos-001', filter with starts_with 'wrong-prefix' → no match → timeout → pass
+    When record from file is sent
+      | topicAlias | file                        | recordKey      |
+      | watcher-in | integration/m-json-payload.json | watcher-pos-001 |
+
+    And record should not appear in topic
+      | topicAlias  | topicType | expectedRecordKey | keyMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+      | watcher-out | raw       | wrong-prefix       | starts_with      | 5                   | 10                |

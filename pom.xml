@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>io.github.ktestify</groupId>
         <artifactId>ktestify-parent</artifactId>
-        <version>1.0.4-SNAPSHOT</version>
+        <version>1.0.6</version>
     </parent>
     <artifactId>ktestify-cucumber</artifactId>
     <version>1.2.1-SNAPSHOT</version>
@@ -45,7 +46,7 @@
         <dependency>
             <groupId>io.github.ktestify</groupId>
             <artifactId>ktestify-core</artifactId>
-            <version>1.1.4-SNAPSHOT</version>
+            <version>1.2.1</version>
         </dependency>
         <dependency>
             <groupId>io.github.ktestify</groupId>
@@ -221,18 +222,23 @@
                                 <filter>
                                     <artifact>io.confluent:logredactor</artifact>
                                     <excludes>
-                                        <exclude>META-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat</exclude>
+                                        <exclude>
+                                            META-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat
+                                        </exclude>
                                     </excludes>
                                 </filter>
                                 <filter>
                                     <artifact>io.confluent:logredactor-metrics</artifact>
                                     <excludes>
-                                        <exclude>META-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat</exclude>
+                                        <exclude>
+                                            META-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat
+                                        </exclude>
                                     </excludes>
                                 </filter>
                             </filters>
                             <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>io.github.ktestify.KtestifyMain</mainClass>
                                     <manifestEntries>
                                         <Implementation-Title>${project.name}</Implementation-Title>
@@ -241,8 +247,10 @@
                                         <Implementation-Vendor>ktestify</Implementation-Vendor>
                                     </manifestEntries>
                                 </transformer>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                     <resource>reference.conf</resource>
                                 </transformer>
                             </transformers>
@@ -294,9 +302,12 @@
                         </environment>
                         <labels>
                             <org.opencontainers.image.title>ktestify-cucumber</org.opencontainers.image.title>
-                            <org.opencontainers.image.description>Cucumber-Kafka integration test runner for ktestify</org.opencontainers.image.description>
-                            <org.opencontainers.image.url>https://github.com/ktestify/ktestify-cucumber</org.opencontainers.image.url>
-                            <org.opencontainers.image.source>https://github.com/ktestify/ktestify-cucumber</org.opencontainers.image.source>
+                            <org.opencontainers.image.description>Cucumber-Kafka integration test runner for ktestify
+                            </org.opencontainers.image.description>
+                            <org.opencontainers.image.url>https://github.com/ktestify/ktestify-cucumber
+                            </org.opencontainers.image.url>
+                            <org.opencontainers.image.source>https://github.com/ktestify/ktestify-cucumber
+                            </org.opencontainers.image.source>
                             <org.opencontainers.image.vendor>ktestify</org.opencontainers.image.vendor>
                             <org.opencontainers.image.licenses>Apache-2.0</org.opencontainers.image.licenses>
                             <org.opencontainers.image.version>${project.version}</org.opencontainers.image.version>

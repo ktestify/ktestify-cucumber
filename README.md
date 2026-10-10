@@ -119,6 +119,31 @@ Feature: Order processing — raw roundtrip
 | `And record should not appear in topic` | Negative assertion (no record within timeout) |
 | `And record should appear in topic` | Positive presence assertion |
 
+All validation steps that accept an `expectedRecordKey` column also accept an optional `keyMatchStrategy` column. See [Key matching strategies](#key-matching-strategies) below.
+
+---
+
+## Key matching strategies
+
+When a step includes an `expectedRecordKey` column, you can optionally add a `keyMatchStrategy` column to control how the key is matched. This is useful when record keys are dynamically generated (UUIDs, prefixed keys) and exact match is too restrictive.
+
+| Strategy | Value | Behaviour |
+|---|---|---|
+| `EXACT` | `exact` | Exact string equality (default) |
+| `CONTAINS` | `contains` | Expected key is a substring of actual |
+| `STARTS_WITH` | `starts_with` | Actual key starts with expected |
+| `ENDS_WITH` | `ends_with` | Actual key ends with expected |
+| `REGEX` | `regex` | Actual key matches Java regex pattern |
+
+```gherkin
+# Match a UUID-prefixed key without knowing the full UUID
+Then expected record from file
+  | topicAlias | file          | expectedRecordKey | keyMatchStrategy | consumerReadTimeout |
+  | orders-out | expected.json | 550e8400          | starts_with      | 30                  |
+```
+
+The value is case-insensitive and tolerant of hyphens/underscores (`starts-with`, `starts_with`, `StartsWith` all work). Unrecognised values default to `exact`.
+
 ---
 
 ## Configuration
@@ -218,4 +243,3 @@ ktestify-cucumber is licensed under the [Apache License 2.0](LICENSE).
   <br/>
   <sub>Assert the stream. Own the pipeline.</sub>
 </p>
-

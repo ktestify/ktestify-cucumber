@@ -54,7 +54,12 @@ conventional_commits   = true
 # Keep filter_unconventional = false so that any commits that don't strictly
 # follow Conventional Commits still reach the commit_parsers below.
 filter_unconventional  = false
-split_commits          = false
+split_commits          = true
+
+commit_preprocessors = [
+    # Strip the "* " bullet GitHub adds to squash-merge bodies
+    { pattern = '(?m)^\s*\*\s+', replace = "" },
+]
 
 commit_parsers = [
     # ── skip noise ──────────────────────────────────────────────────────────
@@ -72,7 +77,9 @@ commit_parsers = [
 
     # ── conventional types → sections ───────────────────────────────────────
     { message = "^feat",               group = "✨ Features"       },
+    { message = "^[Ff]eat/",           group = "✨ Features"       },
     { message = "^fix",                group = "🐛 Bug Fixes"      },
+    { message = "^[Ff]ix",             group = "🐛 Bug Fixes"      },
     { message = "^perf",               group = "⚡ Performance"    },
     { message = "^refactor",           group = "♻️ Refactoring"    },
     { message = "^test",               group = "🧪 Tests"          },
