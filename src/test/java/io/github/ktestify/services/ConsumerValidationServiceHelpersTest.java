@@ -16,9 +16,9 @@
 package io.github.ktestify.services;
 
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
-import io.github.ktestify.match.KeyMatchStrategy;
 import io.github.ktestify.exceptions.ConsumerException;
 import io.github.ktestify.exceptions.FetchTimeoutException;
+import io.github.ktestify.match.KeyMatchStrategy;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -28,9 +28,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for the private helper methods of {@link ConsumerValidationService}.
@@ -215,8 +215,8 @@ class ConsumerValidationServiceHelpersTest {
         @DisplayName("parses case-insensitively")
         void parsesCaseInsensitively() throws Exception {
             assertEquals(KeyMatchStrategy.CONTAINS, invokeGetKeyMatchStrategy(Map.of("keyMatchStrategy", "CONTAINS")));
-    
-    // ── isTimeoutLikeFailure ──────────────────────────────────────────────────
+        }
+    }
 
     @Nested
     @DisplayName("isTimeoutLikeFailure(error)")
@@ -274,6 +274,11 @@ class ConsumerValidationServiceHelpersTest {
         return (String) m.invoke(null, assets, path);
     }
 
+    private static KeyMatchStrategy invokeGetKeyMatchStrategy(Map<String, String> row) throws Exception {
+        Method m = ConsumerValidationService.class.getDeclaredMethod("getKeyMatchStrategy", Map.class);
+        m.setAccessible(true);
+        return (KeyMatchStrategy) m.invoke(null, row);
+    }
     private static boolean invokeIsTimeoutLikeFailure(Throwable failure) throws Exception {
         Method m = ConsumerValidationService.class.getDeclaredMethod("isTimeoutLikeFailure", Throwable.class);
         m.setAccessible(true);
