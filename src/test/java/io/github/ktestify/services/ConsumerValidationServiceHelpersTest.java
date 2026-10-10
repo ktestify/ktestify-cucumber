@@ -17,6 +17,8 @@ package io.github.ktestify.services;
 
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.match.KeyMatchStrategy;
+import io.github.ktestify.exceptions.ConsumerException;
+import io.github.ktestify.exceptions.FetchTimeoutException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -213,6 +215,34 @@ class ConsumerValidationServiceHelpersTest {
         @DisplayName("parses case-insensitively")
         void parsesCaseInsensitively() throws Exception {
             assertEquals(KeyMatchStrategy.CONTAINS, invokeGetKeyMatchStrategy(Map.of("keyMatchStrategy", "CONTAINS")));
+    
+    // ── isTimeoutLikeFailure ──────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("isTimeoutLikeFailure(error)")
+    class TimeoutClassification {
+
+        @Test
+        @DisplayName("returns true for timeout-style messages")
+        void trueForFetchTimeoutType() throws Exception {
+            ConsumerException failure =
+                    new ConsumerException("wrapped", new FetchTimeoutException("Timed out after 1000ms waiting for a record."));
+            assertTrue(invokeIsTimeoutLikeFailure(failure));
+        }
+
+        @Test
+        @DisplayName("returns true when cause chain contains TimeoutException")
+        void trueForTimeoutCause() throws Exception {
+            ConsumerException failure = new ConsumerException(
+                    "Consumer execution failed", new IllegalStateException("wrapped", new TimeoutException("boom")));
+            assertTrue(invokeIsTimeoutLikeFailure(failure));
+        }
+
+        @Test
+        @DisplayName("returns false for non-timeout errors")
+        void falseForNonTimeoutFailure() throws Exception {
+            ConsumerException failure = new ConsumerException("Authentication failed for broker");
+            assertFalse(invokeIsTimeoutLikeFailure(failure));
         }
     }
 
@@ -244,9 +274,9 @@ class ConsumerValidationServiceHelpersTest {
         return (String) m.invoke(null, assets, path);
     }
 
-    private static KeyMatchStrategy invokeGetKeyMatchStrategy(Map<String, String> row) throws Exception {
-        Method m = ConsumerValidationService.class.getDeclaredMethod("getKeyMatchStrategy", Map.class);
+    private static boolean invokeIsTimeoutLikeFailure(Throwable failure) throws Exception {
+        Method m = ConsumerValidationService.class.getDeclaredMethod("isTimeoutLikeFailure", Throwable.class);
         m.setAccessible(true);
-        return (KeyMatchStrategy) m.invoke(null, row);
+        return (boolean) m.invoke(null, failure);
     }
 }

@@ -15,8 +15,7 @@
  */
 package io.github.ktestify.services;
 
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
-
+import com.google.gson.Gson;
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.io.kafka.KafkaClientFactory;
 import io.github.ktestify.io.kafka.ProducerContext;
@@ -24,24 +23,71 @@ import io.github.ktestify.io.kafka.impl.AvroKafkaProducer;
 import io.github.ktestify.io.kafka.impl.RawKafkaProducer;
 import io.github.ktestify.models.Topic;
 import io.github.ktestify.utils.DataTableUtils;
-import java.io.File;
-import java.util.Map;
+import io.github.ktestify.utils.FileUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.kafka.clients.producer.Producer;
+
+import java.io.File;
+import java.time.Duration;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Supplier;
+
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
 
 /**
  * Orchestrates Kafka producer operations for Cucumber step definitions.
  *
  * <p>Builds a typed {@link ProducerContext} from the step DataTable row and delegates to the appropriate concrete
- * producer ({@link RawKafkaProducer} or {@link AvroKafkaProducer}).
- *
- * <p>This service never imports raw {@code org.apache.kafka.*} classes — client creation is fully delegated to
+ * producer ({@link RawKafkaProducer} or {@link AvroKafkaProducer}). Kafka clients are created through
  * {@link KafkaClientFactory}.
+ *
+ * <p><b>Producer lifecycle.</b> One raw and one Avro {@link Producer} are created lazily, on the first row that needs
+ * them, and are then reused for every subsequent row and step handled by this instance. Kafka producers are thread-safe
+ * and expensive to create (network threads, metadata fetch, buffer pool), so creating one per DataTable row would be
+ * wasteful and would leak sockets and threads. The owner of this service (the step definition class) must call
+ * {@link #close()} when the scenario ends; {@link #close()} is idempotent and the service may be reused afterwards, in
+ * which case new producers are created on demand.
+ *
+ * @since 1.2.1
  */
 @Slf4j
-public class ProducerValidationService {
+public class ProducerValidationService implements AutoCloseable {
 
     public static final String DATA_TABLE_HEADER_FILE = "headerFile";
+
+    /** Maximum time {@link #close()} waits for each producer to flush in-flight records and release resources. */
+    static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(10);
+
+    private static final Gson GSON = new Gson();
+
+    private final Supplier<Producer<String, String>> rawProducerFactory;
+    private final Supplier<Producer<String, GenericRecord>> avroProducerFactory;
+
+    private Producer<String, String> rawProducer;
+    private Producer<String, GenericRecord> avroProducer;
+
+    /** Creates a service whose producers are built by {@link KafkaClientFactory} from the ktestify configuration. */
+    public ProducerValidationService() {
+        this(KafkaClientFactory::createRawProducer, KafkaClientFactory::createAvroProducer);
+    }
+
+    /**
+     * Creates a service with custom producer factories (for example to inject a {@code MockProducer} in tests).
+     *
+     * <p>Each factory is invoked at most once between two calls to {@link #close()}.
+     *
+     * @param rawProducerFactory supplies the raw (String key/value) producer
+     * @param avroProducerFactory supplies the Avro producer
+     * @since 1.2.1
+     */
+    public ProducerValidationService(
+            Supplier<Producer<String, String>> rawProducerFactory,
+            Supplier<Producer<String, GenericRecord>> avroProducerFactory) {
+        this.rawProducerFactory = Objects.requireNonNull(rawProducerFactory, "rawProducerFactory");
+        this.avroProducerFactory = Objects.requireNonNull(avroProducerFactory, "avroProducerFactory");
+    }
 
     // =========================================================================
     // Raw (String) producers
@@ -64,7 +110,7 @@ public class ProducerValidationService {
 
         ProducerContext<String, String> ctx = ProducerContext.<String, String>builder()
                 .topic(topic)
-                .producer(KafkaClientFactory.createRawProducer())
+                .producer(rawProducer())
                 .payloadFile(payloadFile)
                 .recordKey(recordKey)
                 .headers(headers)
@@ -100,7 +146,7 @@ public class ProducerValidationService {
 
         ProducerContext<String, GenericRecord> ctx = ProducerContext.<String, GenericRecord>builder()
                 .topic(topic)
-                .producer(KafkaClientFactory.createAvroProducer())
+                .producer(avroProducer())
                 .payloadFile(payloadFile)
                 .recordKey(recordKey)
                 .schemaName(schemaName)
@@ -113,6 +159,53 @@ public class ProducerValidationService {
         } catch (Exception e) {
             throw new RuntimeException(
                     "Failed to send Avro record to topic '" + topic.getNamespacedTopic() + "': " + e.getMessage(), e);
+        }
+    }
+
+    // =========================================================================
+    // Lifecycle
+    // =========================================================================
+
+    /**
+     * Closes the producers created by this service, if any. Each producer is given up to {@link #CLOSE_TIMEOUT} to
+     * flush. Failures are logged and never propagated, so that a close problem cannot mask the scenario result.
+     * Idempotent.
+     *
+     * @since 1.2.1
+     */
+    @Override
+    public synchronized void close() {
+        closeQuietly(rawProducer, "raw");
+        closeQuietly(avroProducer, "Avro");
+        rawProducer = null;
+        avroProducer = null;
+    }
+
+    private synchronized Producer<String, String> rawProducer() {
+        if (rawProducer == null) {
+            rawProducer = Objects.requireNonNull(rawProducerFactory.get(), "raw producer factory returned null");
+            log.debug("Raw Kafka producer created.");
+        }
+        return rawProducer;
+    }
+
+    private synchronized Producer<String, GenericRecord> avroProducer() {
+        if (avroProducer == null) {
+            avroProducer = Objects.requireNonNull(avroProducerFactory.get(), "Avro producer factory returned null");
+            log.debug("Avro Kafka producer created.");
+        }
+        return avroProducer;
+    }
+
+    private static void closeQuietly(Producer<?, ?> producer, String kind) {
+        if (producer == null) {
+            return;
+        }
+        try {
+            producer.close(CLOSE_TIMEOUT);
+            log.debug("{} Kafka producer closed.", kind);
+        } catch (RuntimeException e) {
+            log.warn("Failed to close {} Kafka producer: {}", kind, e.getMessage(), e);
         }
     }
 
@@ -137,12 +230,9 @@ public class ProducerValidationService {
             return Map.of();
         }
         try {
-            String content = io.github.ktestify.utils.FileUtils.getFileContent(
-                    io.github.ktestify.utils.FileUtils.getFile(headerFilePath));
-            // Parse simple flat JSON object: {"key": "value", ...}
-            com.google.gson.Gson gson = new com.google.gson.Gson();
+            String content = FileUtils.getFileContent(FileUtils.getFile(headerFilePath));
             @SuppressWarnings("unchecked")
-            Map<String, String> headers = gson.fromJson(content, Map.class);
+            Map<String, String> headers = GSON.fromJson(content, Map.class);
             return headers != null ? headers : Map.of();
         } catch (Exception e) {
             throw new RuntimeException("Failed to load headers from '" + headerFilePath + "': " + e.getMessage(), e);
