@@ -18,12 +18,14 @@ package io.github.ktestify;
 import io.cucumber.core.cli.Main;
 import io.github.ktestify.banner.KtestifyBanner;
 import io.github.ktestify.config.KtestifyConfig;
+import io.github.ktestify.exceptions.PluginException;
 import io.github.ktestify.plugin.PluginContext;
 import io.github.ktestify.plugin.PluginRegistry;
-import java.util.ArrayList;
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Docker / CLI entry point for ktestify-cucumber.
@@ -84,7 +86,7 @@ public class KtestifyMain {
 
     private static final Logger LOG = LoggerFactory.getLogger(KtestifyMain.class);
 
-    private static final String DEFAULT_GLUE = "io.github.ktestify";
+    private static final String DEFAULT_GLUE = "io.github.ktestify.steps";
     private static final String DEFAULT_FEATURES_ENV = "KTESTIFY_FEATURES_PATH";
     private static final String DEFAULT_FEATURES_PATH = "src/test/resources/features";
     //  private static final String REPORTS_DIR = "target/cucumber-reports";
@@ -95,30 +97,49 @@ public class KtestifyMain {
     private static final String TYPESAFE_CONFIG_FILE_PROP = "config.file";
 
     static void main(String[] args) {
-        KtestifyBanner.print();
-        // ── 0. Wire external config file BEFORE the singleton loads ──────────
-        applyExternalConfigFile(args);
-
-        // ── 1. Eagerly load and log effective config ──────────────────────────
-        logEffectiveConfig();
-
-        // ── 2. Initialize plugin system ───────────────────────────────────────
-        PluginContext pluginCtx = KtestifyConfig::getOrLoad;
-        PluginRegistry pluginRegistry = initPlugins(pluginCtx);
-
-        // ── 3. Strip --config from args so Cucumber CLI doesn't see it ────────
-        List<String> pluginGlue = pluginRegistry.getGluePackages();
-        String[] cucumberArgs = buildArgs(stripConfigArg(args), pluginGlue);
-        LOG.info("Starting ktestify-cucumber — effective args: {}", (Object) cucumberArgs);
-
-        byte exitCode = Main.run(cucumberArgs, Thread.currentThread().getContextClassLoader());
-        LOG.info("Cucumber finished with exit code {}", exitCode);
-
-        // ── 4. Shutdown plugins before exit ───────────────────────────────────
-        pluginRegistry.shutdown();
-
-        System.exit(exitCode);
+        System.exit(run(args));
     }
+
+    /**
+     * Runs the CLI without terminating the JVM. Returns Cucumber's exit code, or {@code 2} for startup or execution
+     * errors. Plugins are shut down before returning, including when argument preparation or execution fails.
+     *
+     * @param args raw CLI arguments
+     * @return the command exit code
+     * @since 1.2.2-SNAPSHOT
+     */
+    public static int run(String[] args) {
+        PluginRegistry pluginRegistry = null;
+        try {
+            KtestifyBanner.print();
+            applyExternalConfigFile(args);
+            logEffectiveConfig();
+
+            PluginContext pluginCtx = KtestifyConfig::getOrLoad;
+            pluginRegistry = initPlugins(pluginCtx);
+
+            List<String> pluginGlue = pluginRegistry.getGluePackages();
+            String[] cucumberArgs = buildArgs(stripConfigArg(args), pluginGlue);
+            LOG.info("Starting ktestify-cucumber — effective args: {}", (Object) cucumberArgs);
+
+            byte exitCode = Main.run(cucumberArgs, Thread.currentThread().getContextClassLoader());
+            LOG.info("Cucumber finished with exit code {}", exitCode);
+            return exitCode;
+        } catch (Exception | java.util.ServiceConfigurationError e) {
+            LOG.error("ktestify-cucumber failed to start or execute.", e);
+            return 2;
+        } finally {
+            if (pluginRegistry != null) {
+                pluginRegistry.shutdown();
+            }
+        }
+    }
+
+    /*
+     * -------------------------------------------------------------------------
+     * Package-private — tested directly
+     * -------------------------------------------------------------------------
+     */
 
     // -------------------------------------------------------------------------
     // Package-private — tested directly
@@ -173,8 +194,7 @@ public class KtestifyMain {
         if (configPath != null && !configPath.isBlank()) {
             java.io.File file = new java.io.File(configPath);
             if (!file.exists()) {
-                LOG.error("Config file not found: '{}'. Aborting.", configPath);
-                System.exit(2);
+                throw new IllegalArgumentException("Config file not found: '" + configPath + "'.");
             }
             // Tell Typesafe Config to use this file as the primary config source
             System.setProperty(TYPESAFE_CONFIG_FILE_PROP, file.getAbsolutePath());
@@ -229,7 +249,7 @@ public class KtestifyMain {
         } catch (Exception e) {
             LOG.error("Failed to load ktestify configuration: {}", e.getMessage());
             LOG.error("Check your environment variables or -D system properties.");
-            System.exit(2);
+            throw new IllegalStateException("Failed to load ktestify configuration.", e);
         }
     }
 
@@ -349,8 +369,7 @@ public class KtestifyMain {
             return PluginRegistry.load(ctx);
         } catch (Exception e) {
             LOG.error("Fatal: plugin system failed to initialize — {}", e.getMessage(), e);
-            System.exit(2);
-            throw new IllegalStateException("unreachable");
+            throw new PluginException("Plugin system failed to initialize.", e);
         }
     }
 }
