@@ -106,7 +106,7 @@ public class KtestifyMain {
      *
      * @param args raw CLI arguments
      * @return the command exit code
-     * @since 1.2.2-SNAPSHOT
+     * @since 1.2.2
      */
     public static int run(String[] args) {
         PluginRegistry pluginRegistry = null;
@@ -120,7 +120,7 @@ public class KtestifyMain {
 
             List<String> pluginGlue = pluginRegistry.getGluePackages();
             String[] cucumberArgs = buildArgs(stripConfigArg(args), pluginGlue);
-            LOG.info("Starting ktestify-cucumber — effective args: {}", (Object) cucumberArgs);
+            LOG.info("Starting ktestify-cucumber, effective args: {}", (Object) cucumberArgs);
 
             byte exitCode = Main.run(cucumberArgs, Thread.currentThread().getContextClassLoader());
             LOG.info("Cucumber finished with exit code {}", exitCode);
@@ -137,13 +137,9 @@ public class KtestifyMain {
 
     /*
      * -------------------------------------------------------------------------
-     * Package-private — tested directly
+     * Package-private: tested directly
      * -------------------------------------------------------------------------
      */
-
-    // -------------------------------------------------------------------------
-    // Package-private — tested directly
-    // -------------------------------------------------------------------------
 
     /**
      * Builds the final argument array for the Cucumber CLI. If the caller supplies arguments they are used as-is (with
@@ -237,15 +233,56 @@ public class KtestifyMain {
     private static void logEffectiveConfig() {
         try {
             KtestifyConfig cfg = KtestifyConfig.getOrLoad();
-            LOG.info("╔══ KTestify effective configuration ═══════════════════════════");
-            LOG.info("║  kafka.bootstrap-servers : {}", cfg.getKafka().getBootstrapServers());
-            LOG.info("║  schema-registry.url     : {}", cfg.getSchemaRegistry().getUrl());
-            LOG.info("║  read-timeout            : {}ms", cfg.getFramework().getDefaultReadTimeoutMillis());
-            LOG.info("║  consumer-delta-time     : {}s", cfg.getFramework().getConsumerDeltaTimeSeconds());
+            LOG.info("KTestify effective configuration");
+            LOG.info("kafka.bootstrap-servers: {}", cfg.getKafka().getBootstrapServers());
+            LOG.info("schema-registry.url: {}", cfg.getSchemaRegistry().getUrl());
+            LOG.info("read-timeout: {}ms", cfg.getFramework().getDefaultReadTimeoutMillis());
+            LOG.info("consumer-delta-time: {}s", cfg.getFramework().getConsumerDeltaTimeSeconds());
             LOG.info(
-                    "║  assets-directory        : '{}'",
+                    "assets-directory: '{}'",
                     cfg.getFramework().getAssetsDirectory().orElse("<not set>"));
-            LOG.info("╚═══════════════════════════════════════════════════════════════");
+            LOG.debug("poll-interval: {}ms", cfg.getFramework().getPollIntervalMillis());
+            LOG.debug("buffer-time: {}ms", cfg.getFramework().getBufferTimeMillis());
+            LOG.debug("schemas-directory: '{}'", cfg.getFramework().getSchemasDirectory().orElse("<not set>"));
+            LOG.debug("output-directory: '{}'", cfg.getFramework().getOutputDirectory().orElse("<not set>"));
+            LOG.debug("snapshot-mode: {}", cfg.getFramework().isSnapshotMode());
+            LOG.debug("strict-matching: {}", cfg.getFramework().isStrictMatching());
+            LOG.debug("max-retries: {}", cfg.getFramework().getMaxRetries());
+            LOG.debug("reporting.enabled: {}", cfg.getFramework().isEnableReporting());
+            LOG.debug("reporting.format: '{}'", cfg.getFramework().getReportFormat());
+            LOG.debug("reporting.output: '{}'", cfg.getFramework().getReportOutputDirectory());
+            var kafka = cfg.getKafka();
+            LOG.debug("kafka.topic-namespace: '{}'", kafka.getTopicNamespace().orElse("<not set>"));
+            LOG.debug("kafka.security-protocol: {}", kafka.getSecurityProtocol());
+            LOG.debug("kafka.security.sasl-mechanism: {}", kafka.getSaslMechanism().orElse("<not set>"));
+            LOG.debug("kafka.security.sasl-jaas-configured: {}", kafka.getSaslJaasConfig().isPresent());
+            LOG.debug("kafka.security.truststore-configured: {}", kafka.getSslTruststoreLocation().isPresent());
+            LOG.debug("kafka.security.keystore-configured: {}", kafka.getSslKeystoreLocation().isPresent());
+            LOG.debug("kafka.producer.acks: {}", kafka.getProducerAcks());
+            LOG.debug("kafka.producer.retries: {}", kafka.getProducerRetries());
+            LOG.debug("kafka.producer.batch-size: {} bytes", kafka.getProducerBatchSize());
+            LOG.debug("kafka.producer.linger-ms: {}ms", kafka.getProducerLingerMs().toMillis());
+            LOG.debug("kafka.producer.buffer-memory: {} bytes", kafka.getProducerBufferMemory());
+            LOG.debug("kafka.producer.key-serializer: {}", kafka.getProducerKeySerializer());
+            LOG.debug("kafka.producer.value-serializer: {}", kafka.getProducerValueSerializer());
+            LOG.debug("kafka.consumer.group-id: '{}'", kafka.getConsumerGroupId());
+            LOG.debug("kafka.consumer.enable-auto-commit: {}", kafka.isConsumerEnableAutoCommit());
+            LOG.debug("kafka.consumer.auto-offset-reset: {}", kafka.getConsumerAutoOffsetReset());
+            LOG.debug("kafka.consumer.session-timeout: {}ms", kafka.getConsumerSessionTimeout().toMillis());
+            LOG.debug("kafka.consumer.heartbeat-interval: {}ms", kafka.getConsumerHeartbeatInterval().toMillis());
+            LOG.debug("kafka.consumer.max-poll-records: {}", kafka.getConsumerMaxPollRecords());
+            LOG.debug("kafka.consumer.key-deserializer: {}", kafka.getConsumerKeyDeserializer());
+            LOG.debug("kafka.consumer.value-deserializer: {}", kafka.getConsumerValueDeserializer());
+            var schemaRegistry = cfg.getSchemaRegistry();
+            LOG.debug("schema-registry.cache-capacity: {}", schemaRegistry.getCacheCapacity());
+            LOG.debug("schema-registry.auto-register-schemas: {}", schemaRegistry.isAutoRegisterSchemas());
+            LOG.debug("schema-registry.compatibility-level: {}", schemaRegistry.getCompatibilityLevel());
+            LOG.debug(
+                    "schema-registry.auth.credentials-source: {}",
+                    schemaRegistry.getBasicAuthCredentialsSource().orElse("<not set>"));
+            LOG.debug("schema-registry.auth.user-info-configured: {}", schemaRegistry.getBasicAuthUserInfo().isPresent());
+            LOG.debug("schema-registry.ssl.truststore-configured: {}", schemaRegistry.getSslTruststoreLocation().isPresent());
+            LOG.debug("schema-registry.ssl.keystore-configured: {}", schemaRegistry.getSslKeystoreLocation().isPresent());
         } catch (Exception e) {
             LOG.error("Failed to load ktestify configuration: {}", e.getMessage());
             LOG.error("Check your environment variables or -D system properties.");

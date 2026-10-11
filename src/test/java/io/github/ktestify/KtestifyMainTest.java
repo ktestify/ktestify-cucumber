@@ -21,6 +21,11 @@ import io.github.ktestify.config.KtestifyConfig;
 import io.github.ktestify.exceptions.PluginException;
 import io.github.ktestify.plugin.PluginContext;
 import io.github.ktestify.plugin.PluginRegistry;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +36,7 @@ import org.mockito.MockedStatic;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -175,5 +181,87 @@ class KtestifyMainTest {
                 aryEq(new String[]{"--glue", "io.github.ktestify.steps", "--glue", "test.plugin.steps", "features"}),
                 any(ClassLoader.class)));
         verify(registry).shutdown();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"INFO", "DEBUG"})
+    void logsPlainConfigurationWithAllowlistedDebugDetails(String level) {
+        KtestifyConfig.reset();
+        KtestifyConfig.load(ConfigFactory.parseString("""
+                ktestify.framework.reporting.enabled = false
+                ktestify.framework.timeouts.poll-interval = 123ms
+                ktestify.framework.timeouts.buffer-time = 456ms
+                ktestify.framework.directories.schemas = "/test/schemas"
+                ktestify.framework.directories.output = "/test/output"
+                ktestify.plugins.http.token = "must-not-be-logged"
+                ktestify.kafka.topic-namespace = "debug-tests"
+                ktestify.kafka.producer.retries = 7
+                ktestify.kafka.consumer.group-id = "debug-consumer"
+                ktestify.kafka.consumer.max-poll-records = 42
+                ktestify.kafka.security.sasl-jaas-config = "must-not-be-logged"
+                ktestify.kafka.security.ssl-truststore-password = "must-not-be-logged"
+                ktestify.schema-registry.cache-capacity = 123
+                ktestify.schema-registry.auth.basic-auth-user-info = "must-not-be-logged"
+                ktestify.schema-registry.ssl.keystore-password = "must-not-be-logged"
+                """).withValue("ktestify.logging.level", com.typesafe.config.ConfigValueFactory.fromAnyRef(level)));
+
+        List<LogEvent> events = new ArrayList<>();
+        AbstractAppender appender = new AbstractAppender("config-test", null, null, true, null) {
+            @Override
+            public void append(LogEvent event) {
+                events.add(event.toImmutable());
+            }
+        };
+        Logger logger = (Logger) LogManager.getLogger(KtestifyMain.class);
+        Level originalLevel = logger.getLevel();
+        logger.setLevel(Level.valueOf(level));
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            assertEquals(0, KtestifyMain.run(new String[]{"features"}));
+        } finally {
+            logger.removeAppender(appender);
+            logger.setLevel(originalLevel);
+            appender.stop();
+        }
+
+        List<String> messages = events.stream()
+                .map(event -> event.getMessage().getFormattedMessage())
+                .toList();
+        assertTrue(messages.contains("KTestify effective configuration"));
+        assertTrue(messages.stream().anyMatch(message -> message.startsWith("read-timeout: ")));
+        assertFalse(messages.stream().anyMatch(message -> message.chars()
+                .anyMatch(character -> character >= 0x2500 && character <= 0x257F)));
+        assertFalse(messages.stream().anyMatch(message -> message.contains("must-not-be-logged")));
+        List<String> debugMessages = events.stream()
+                .filter(event -> event.getLevel() == Level.DEBUG)
+                .map(event -> event.getMessage().getFormattedMessage())
+                .toList();
+        if ("DEBUG".equals(level)) {
+            assertTrue(debugMessages.containsAll(List.of(
+                    "poll-interval: 123ms",
+                    "buffer-time: 456ms",
+                    "schemas-directory: '/test/schemas'",
+                    "output-directory: '/test/output'",
+                    "reporting.enabled: false",
+                    "kafka.topic-namespace: 'debug-tests'",
+                    "kafka.producer.retries: 7",
+                    "kafka.consumer.group-id: 'debug-consumer'",
+                    "kafka.consumer.max-poll-records: 42",
+                    "kafka.security.sasl-jaas-configured: true",
+                    "kafka.security.truststore-configured: false",
+                    "schema-registry.cache-capacity: 123",
+                    "schema-registry.auth.user-info-configured: true")));
+            assertTrue(debugMessages.stream().anyMatch(message -> message.startsWith("kafka.producer.linger-ms: ")));
+            assertTrue(debugMessages.stream().anyMatch(message -> message.startsWith("kafka.consumer.session-timeout: ")));
+            assertTrue(debugMessages.stream().anyMatch(message -> message.startsWith("schema-registry.compatibility-level: ")));
+            assertTrue(debugMessages.stream().anyMatch(message -> message.startsWith("snapshot-mode: ")));
+            assertTrue(debugMessages.stream().anyMatch(message -> message.startsWith("strict-matching: ")));
+            assertTrue(debugMessages.stream().anyMatch(message -> message.startsWith("max-retries: ")));
+            assertTrue(debugMessages.stream().anyMatch(message -> message.startsWith("reporting.format: ")));
+            assertTrue(debugMessages.stream().anyMatch(message -> message.startsWith("reporting.output: ")));
+        } else {
+            assertTrue(debugMessages.isEmpty());
+        }
     }
 }
