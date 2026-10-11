@@ -150,6 +150,16 @@ public final class DataTableUtils {
         public static final String DATA_TABLE_EXPECTED_RECORD_KEY = "expectedRecordKey";
         public static final String EXPECTED_RECORD_KEY = "expectedRecordKey";
 
+        /**
+         * DataTable column for the key match strategy. Optional on all steps that accept
+         * {@link #DATA_TABLE_EXPECTED_RECORD_KEY}. Accepts {@code exact}, {@code contains}, {@code starts_with},
+         * {@code ends_with}, {@code regex} (case-insensitive, hyphens and spaces tolerated). Defaults to {@code exact}
+         * when absent.
+         *
+         * @since 1.0.6
+         */
+        public static final String DATA_TABLE_KEY_MATCH_STRATEGY = "keyMatchStrategy";
+
         public static final String DATA_TABLE_EXPECTED_RECORDS_COUNT = "expectedRecordsCount";
         public static final String EXPECTED_RECORDS_COUNT = "expectedRecordsCount";
 

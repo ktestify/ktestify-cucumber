@@ -15,9 +15,8 @@
  */
 package io.github.ktestify.steps;
 
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
-
 import io.cucumber.datatable.DataTable;
+import io.cucumber.java.After;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.When;
 import io.github.ktestify.io.kafka.KafkaRecordFetcher;
@@ -26,10 +25,13 @@ import io.github.ktestify.script.ScriptService;
 import io.github.ktestify.services.ProducerValidationService;
 import io.github.ktestify.utils.DataTableUtils;
 import io.github.ktestify.utils.TopicUtils;
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
+
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
 
 /**
  * Cucumber {@code @When} (and {@code @And}) step definitions for actions: producing records, sending files, executing
@@ -46,6 +48,20 @@ public class ActionStepDefinition {
         this.resources = resources;
         this.producerService = new ProducerValidationService();
         this.scriptService = new ScriptService();
+    }
+
+    // =========================================================================
+    // Lifecycle
+    // =========================================================================
+
+    /**
+     * Releases the Kafka producers opened by this scenario. PicoContainer creates one instance of this class per
+     * scenario, so producers are shared by every row and step of the scenario and closed exactly once at its end, even
+     * when the scenario fails.
+     */
+    @After
+    public void closeProducers() {
+        producerService.close();
     }
 
     // =========================================================================

@@ -76,3 +76,63 @@ Feature: Record key filtering
       | topicAlias | topicType | consumerReadTimeout | consumerDeltaTime | expectedRecordKey |
       | rt-out     | raw       | 5                   | 10                | kf-key-NONEXISTENT |
 
+  # ── keyMatchStrategy — non-exact key matching ──────────────────────────────
+
+  @keyStrategy
+  Scenario: Consumer matches record by key prefix using starts_with strategy
+    When record from file is sent
+      | topicAlias | file                         | recordKey   |
+      | rt-in      | integration/kf-payload-a.json | kf-key-AAA  |
+
+    Then expected record from file
+      | topicAlias | file                          | expectedRecordKey | keyMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+      | rt-out     | integration/kf-expected-a.json | kf-key-AA         | starts_with      | 15                  | 30                |
+
+  @keyStrategy
+  Scenario: Consumer matches record by key suffix using ends_with strategy
+    When record from file is sent
+      | topicAlias | file                         | recordKey   |
+      | rt-in      | integration/kf-payload-a.json | kf-key-AAA  |
+
+    Then expected record from file
+      | topicAlias | file                          | expectedRecordKey | keyMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+      | rt-out     | integration/kf-expected-a.json | AAA               | ends_with        | 15                  | 30                |
+
+  @keyStrategy
+  Scenario: Consumer matches record by key substring using contains strategy
+    # "key-A" is unique to kf-key-AAA among all keys on the topic, avoiding mismatch with
+    # kf-key-BBB / kf-key-CCC / kf-key-DECOY from prior scenarios.
+    When record from file is sent
+      | topicAlias | file                         | recordKey   |
+      | rt-in      | integration/kf-payload-a.json | kf-key-AAA  |
+
+    Then expected record from file
+      | topicAlias | file                          | expectedRecordKey | keyMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+      | rt-out     | integration/kf-expected-a.json | key-A             | contains         | 15                  | 30                |
+
+  @keyStrategy
+  Scenario: Consumer matches record by regex pattern using regex strategy
+    # "kf-key-A\w+" only matches kf-key-AAA, not kf-key-DECOY/BBB/CCC from prior scenarios
+    When record from file is sent
+      | topicAlias | file                         | recordKey   |
+      | rt-in      | integration/kf-payload-a.json | kf-key-AAA  |
+
+    Then expected record from file
+      | topicAlias | file                          | expectedRecordKey | keyMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+      | rt-out     | integration/kf-expected-a.json | kf-key-A\w+       | regex            | 15                  | 30                |
+
+  @keyStrategy
+  Scenario: Consumer skips records with non-matching key prefix and picks correct one
+    # Produce decoy with key "kf-key-DECOY", then real record with "kf-key-CCC"
+    # Filter by starts_with "kf-key-C" → only "kf-key-CCC" matches
+    When record from file is sent
+      | topicAlias | file                              | recordKey      |
+      | rt-in      | integration/kf-payload-decoy.json  | kf-key-DECOY   |
+
+    And record from file is sent
+      | topicAlias | file                         | recordKey   |
+      | rt-in      | integration/kf-payload-c.json | kf-key-CCC  |
+
+    Then expected record from file
+      | topicAlias | file                          | expectedRecordKey | keyMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+      | rt-out     | integration/kf-expected-c.json | kf-key-C          | starts_with      | 15                  | 30                |

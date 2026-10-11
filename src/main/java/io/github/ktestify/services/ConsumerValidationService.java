@@ -15,20 +15,23 @@
  */
 package io.github.ktestify.services;
 
-import static io.github.ktestify.match.RecordMatcherFactory.*;
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
-
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.exceptions.ConsumerException;
+import io.github.ktestify.exceptions.FetchTimeoutException;
 import io.github.ktestify.io.kafka.ConsumerContext;
 import io.github.ktestify.io.kafka.KafkaClientFactory;
 import io.github.ktestify.io.kafka.impl.AvroKafkaConsumer;
 import io.github.ktestify.io.kafka.impl.RawKafkaConsumer;
+import io.github.ktestify.match.KeyMatchStrategy;
 import io.github.ktestify.models.Topic;
-import java.util.*;
-import java.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.generic.GenericRecord;
+
+import java.util.*;
+import java.util.concurrent.*;
+
+import static io.github.ktestify.match.RecordMatcherFactory.*;
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
 
 /**
  * Orchestrates Kafka consumer validation for Cucumber step definitions.
@@ -96,6 +99,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_MATCH_FILE)
                 .matchFilePath(file)
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
@@ -139,6 +143,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_FIELDS_TO_MATCH)
                 .matchFilePath(file)
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
@@ -194,6 +199,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_MATCH_XML)
                 .matchFilePath(file)
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .excludedFields(excluded)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
@@ -234,6 +240,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_MATCH_XPATH)
                 .matchFilePath(file)
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .excludedFields(xpaths) // XPathRecordMatcher reads expressions from excludedFields
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
@@ -273,7 +280,8 @@ public class ConsumerValidationService {
 
     /**
      * Validates that a record does <em>not</em> appear (watcher / negative assertion). Uses
-     * {@link io.github.ktestify.match.impl.NoOpRecordMatcher}. If a record arrives the step fails; timeout means pass.
+     * {@link io.github.ktestify.match.impl.NoOpRecordMatcher}. If a record arrives the step fails; only timeout-like
+     * failures are treated as pass.
      */
     public void validateNoRecord(Map<String, String> row, Topic topic) {
         validateNoRecord(row, topic, null);
@@ -293,6 +301,7 @@ public class ConsumerValidationService {
                 .topic(topic)
                 .consumer(KafkaClientFactory.createRawConsumer())
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
@@ -303,9 +312,11 @@ public class ConsumerValidationService {
         try {
             recordArrived = runWithTimeout(new RawKafkaConsumer(ctx), readTimeout);
         } catch (ConsumerException e) {
-            // Timeout = no record found = expected
-            log.info("No record found on topic '{}' as expected.", topic.getNamespacedTopic());
-            return;
+            if (isTimeoutLikeFailure(e)) {
+                log.info("No record found on topic '{}' as expected.", topic.getNamespacedTopic());
+                return;
+            }
+            throw e;
         }
         if (recordArrived) {
             throw new AssertionError(
@@ -332,6 +343,7 @@ public class ConsumerValidationService {
                 .topic(topic)
                 .consumer(KafkaClientFactory.createRawConsumer())
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
@@ -367,6 +379,7 @@ public class ConsumerValidationService {
                 .consumer(KafkaClientFactory.createRawConsumer())
                 .matchMethod(METHOD_RECORD_KEY_MATCH)
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
@@ -375,6 +388,7 @@ public class ConsumerValidationService {
         io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
                 .matchMethod(METHOD_RECORD_KEY_MATCH)
                 .matchKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .strictMatching(false)
                 .build();
 
@@ -421,6 +435,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_MATCH_KEY_FILE)
                 .matchFilePath(file)
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
@@ -430,6 +445,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_MATCH_KEY_FILE)
                 .matchFilePath(file)
                 .matchKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .strictMatching(false)
                 .build();
 
@@ -657,6 +673,7 @@ public class ConsumerValidationService {
                 .consumer(KafkaClientFactory.createAvroConsumer())
                 .matchMethod(METHOD_RECORD_KEY_MATCH)
                 .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
@@ -665,6 +682,7 @@ public class ConsumerValidationService {
         io.github.ktestify.match.MatchContext matchCtx = io.github.ktestify.match.MatchContext.builder()
                 .matchMethod(METHOD_RECORD_KEY_MATCH)
                 .matchKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .strictMatching(false)
                 .build();
 
@@ -704,15 +722,41 @@ public class ConsumerValidationService {
             return Boolean.TRUE.equals(future.get(timeoutMs, TimeUnit.MILLISECONDS));
         } catch (TimeoutException e) {
             future.cancel(true);
-            throw new ConsumerException("Outer timeout exceeded after " + timeoutMs + "ms.");
+            throw new ConsumerException("Outer timeout exceeded after " + timeoutMs + "ms.", e);
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();
-            if (cause instanceof ConsumerException ce) throw ce;
-            throw new ConsumerException("Consumer execution failed: " + cause.getMessage());
+            AssertionError assertion = findCause(cause, AssertionError.class);
+            if (assertion != null) throw assertion;
+
+            ConsumerException consumerException = findCause(cause, ConsumerException.class);
+            if (consumerException != null) throw consumerException;
+
+            throw new ConsumerException("Consumer execution failed: " + cause.getMessage(), cause);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ConsumerException("Consumer thread interrupted.");
         }
+    }
+
+    private static <T extends Throwable> T findCause(Throwable throwable, Class<T> type) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (type.isInstance(current)) return type.cast(current);
+            current = current.getCause();
+        }
+        return null;
+    }
+
+    /** Returns true for timeout-like failures only (negative watcher expected outcome). */
+    private static boolean isTimeoutLikeFailure(Throwable failure) {
+        Throwable current = failure;
+        while (current != null) {
+            if (current instanceof TimeoutException || current instanceof FetchTimeoutException) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     // =========================================================================
@@ -771,5 +815,18 @@ public class ConsumerValidationService {
      */
     private static long now() {
         return System.currentTimeMillis();
+    }
+
+    /**
+     * Reads the optional {@code keyMatchStrategy} column from the DataTable row and parses it into a
+     * {@link KeyMatchStrategy}. Returns {@link KeyMatchStrategy#EXACT} when the column is absent or unrecognized,
+     * preserving backward compatibility.
+     *
+     * @param row the DataTable row
+     * @return the parsed strategy, never {@code null}
+     * @since 1.0.6
+     */
+    private static KeyMatchStrategy getKeyMatchStrategy(Map<String, String> row) {
+        return KeyMatchStrategy.fromString(getString(row, DATA_TABLE_KEY_MATCH_STRATEGY));
     }
 }
