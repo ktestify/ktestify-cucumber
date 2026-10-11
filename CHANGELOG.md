@@ -2,7 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.2.1] — 2026-10-11
+
 ### ♻️ Refactoring
 
 - Removed ObjectManager from cucumber it is provided by ktestify-core — [@nil-malh](https://github.com/nil-malh) ([#53](https://github.com/ktestify/ktestify-cucumber/pull/53))
