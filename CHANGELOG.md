@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### ♻️ Refactoring
+
+- Removed ObjectManager from cucumber it is provided by ktestify-core — [@nil-malh](https://github.com/nil-malh) ([#53](https://github.com/ktestify/ktestify-cucumber/pull/53))
+
+- Improve error handling in ConsumerValidationService by extracting cause finding logic — [@nil-malh](https://github.com/nil-malh) ([#53](https://github.com/ktestify/ktestify-cucumber/pull/53))
+
+
+### ✨ Features
+
+- Feat/bug fixes (#53) — [@nil-malh](https://github.com/nil-malh) ([#53](https://github.com/ktestify/ktestify-cucumber/pull/53))
+
+- Enhance timeout handling in ConsumerValidationService and add tests — [@nil-malh](https://github.com/nil-malh) ([#53](https://github.com/ktestify/ktestify-cucumber/pull/53))
+
+- Add keyMatchStrategy support for flexible key matching (#52) — [@nil-malh](https://github.com/nil-malh) ([#53](https://github.com/ktestify/ktestify-cucumber/pull/53))
+
+- Add keyMatchStrategy support for flexible key matching in ConsumerValidationService — [@nil-malh](https://github.com/nil-malh) ([#53](https://github.com/ktestify/ktestify-cucumber/pull/53))
+
+
+### ⬆️ Dependency Updates
+
+- Updates ktestify first-party plugins versions to latest — [@nil-malh](https://github.com/nil-malh) ([#53](https://github.com/ktestify/ktestify-cucumber/pull/53))
+
+
+### 🐛 Bug Fixes
+
+- Close kafka producer after step — [@nil-malh](https://github.com/nil-malh) ([#53](https://github.com/ktestify/ktestify-cucumber/pull/53))
+
+- Handle AssertionError in ConsumerValidationService and update ktestify dependency to 1.2.2 — [@nil-malh](https://github.com/nil-malh) ([#53](https://github.com/ktestify/ktestify-cucumber/pull/53))
+
+
+### 🧪 Tests
+
+- Refactor ConsumerValidationServiceHelpersTest for improved readability and structure — [@nil-malh](https://github.com/nil-malh) ([#53](https://github.com/ktestify/ktestify-cucumber/pull/53))
+
+
 ## [1.2.0] — 2026-09-29
 
 ### ⬆️ Dependency Updates
@@ -23,7 +59,11 @@ All notable changes to this project will be documented in this file.
 
 - Added centralised actions (#37) — [@nil-malh](https://github.com/nil-malh) ([#37](https://github.com/ktestify/ktestify-cucumber/pull/37))
 
+- Added centralised actions — [@nil-malh](https://github.com/nil-malh) ([#37](https://github.com/ktestify/ktestify-cucumber/pull/37))
+
 - Implement multi-row support for producer and consumer steps wit… (#40) — [@nil-malh](https://github.com/nil-malh) ([#40](https://github.com/ktestify/ktestify-cucumber/pull/40))
+
+- Implement multi-row support for producer and consumer steps with topic validation — [@nil-malh](https://github.com/nil-malh) ([#40](https://github.com/ktestify/ktestify-cucumber/pull/40))
 
 
 ### ⬆️ Dependency Updates
@@ -33,7 +73,29 @@ All notable changes to this project will be documented in this file.
 
 ## [1.0.5] — 2026-07-07
 
+### ✨ Features
+
+- Feat/ktestify parent pom (#35) — [@nil-malh](https://github.com/nil-malh) ([#35](https://github.com/ktestify/ktestify-cucumber/pull/35))
+
+- Switched to a parent pom for dependencies management — [@nil-malh](https://github.com/nil-malh) ([#35](https://github.com/ktestify/ktestify-cucumber/pull/35))
+
+
+### ⬆️ Dependency Updates
+
+- Updated ktestify-core to 0.1.2 — [@nil-malh](https://github.com/nil-malh) ([#31](https://github.com/ktestify/ktestify-cucumber/pull/31))
+
+- Updated ktestify-plugin-azureblob & ktestify-plugin-notifications to 0.1.2 — [@nil-malh](https://github.com/nil-malh) ([#35](https://github.com/ktestify/ktestify-cucumber/pull/35))
+
+
 ### 🐛 Bug Fixes
+
+- Fix/30 (#31) — [@nil-malh](https://github.com/nil-malh) ([#31](https://github.com/ktestify/ktestify-cucumber/pull/31))
+
+- Fixed an issue where the version banner was displaying dev — [@nil-malh](https://github.com/nil-malh) ([#31](https://github.com/ktestify/ktestify-cucumber/pull/31))
+
+- Fixed an issue where the reporting plugin was not added to the Cucumber glue when args were provided — [@nil-malh](https://github.com/nil-malh) ([#31](https://github.com/ktestify/ktestify-cucumber/pull/31))
+
+- Update dependencies and align Jackson versions to prevent runtime errors — [@nil-malh](https://github.com/nil-malh) ([#31](https://github.com/ktestify/ktestify-cucumber/pull/31))
 
 - Added missing version.properties file — [@nil-malh](https://github.com/nil-malh)
 
