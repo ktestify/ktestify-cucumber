@@ -2,7 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.2.2] — 2026-10-12
+
 ### ♻️ Refactoring
 
 - Improve logging format and update version in documentation — [@nil-malh](https://github.com/nil-malh) ([#54](https://github.com/ktestify/ktestify-cucumber/pull/54))
