@@ -78,12 +78,13 @@ class KtestifyMainTest {
     @ParameterizedTest
     @ValueSource(ints = {0, 1, 2})
     void returnsCucumberExitCodeAfterShutdown(int code) {
-        cucumber.when(() -> Main.run(any(String[].class), any(ClassLoader.class))).thenReturn((byte) code);
+        cucumber.when(() -> Main.run(any(String[].class), any(ClassLoader.class)))
+                .thenReturn((byte) code);
 
-        assertEquals(code, KtestifyMain.run(new String[]{"features"}));
+        assertEquals(code, KtestifyMain.run(new String[] {"features"}));
 
         cucumber.verify(() -> Main.run(
-                aryEq(new String[]{"--glue", "io.github.ktestify.steps", "--glue", "test.plugin.steps", "features"}),
+                aryEq(new String[] {"--glue", "io.github.ktestify.steps", "--glue", "test.plugin.steps", "features"}),
                 eq(Thread.currentThread().getContextClassLoader())));
         verify(registry).shutdown();
     }
@@ -93,8 +94,8 @@ class KtestifyMainTest {
         assertEquals(0, KtestifyMain.run(new String[0]));
 
         cucumber.verify(() -> Main.run(
-                argThat(args -> Arrays.asList(args).containsAll(List.of(
-                        "--glue", "io.github.ktestify.steps", "test.plugin.steps"))),
+                argThat(args -> Arrays.asList(args)
+                        .containsAll(List.of("--glue", "io.github.ktestify.steps", "test.plugin.steps"))),
                 any(ClassLoader.class)));
         verify(registry).shutdown();
     }
@@ -103,9 +104,30 @@ class KtestifyMainTest {
     void realCucumberHelpReturnsWithoutTerminatingJvm() {
         cucumber.closeOnDemand();
 
-        assertEquals(0, KtestifyMain.run(new String[]{"--help"}));
+        assertEquals(0, KtestifyMain.run(new String[] {"--help"}));
 
         verify(registry).shutdown();
+    }
+
+    /**
+     * The {@code lint} subcommand delegates to the feature linter and exits before any Cucumber or plugin startup, so
+     * neither the plugin registry nor Cucumber is touched.
+     */
+    @Test
+    void lintSubcommandDelegatesToLinterWithoutCucumberStartup() {
+        assertEquals(0, KtestifyMain.run(new String[] {"lint", "src/test/resources/lint/clean.feature"}));
+
+        cucumber.verifyNoInteractions();
+        verifyNoInteractions(registry);
+    }
+
+    /** The {@code lint} subcommand propagates the linter exit code: a file with ERROR-severity violations exits 1. */
+    @Test
+    void lintSubcommandPropagatesLinterExitCode() {
+        assertEquals(1, KtestifyMain.run(new String[] {"lint", "src/test/resources/lint/domain.feature"}));
+
+        cucumber.verifyNoInteractions();
+        verifyNoInteractions(registry);
     }
 
     @Test
@@ -113,7 +135,7 @@ class KtestifyMainTest {
         cucumber.when(() -> Main.run(any(String[].class), any(ClassLoader.class)))
                 .thenThrow(new IllegalStateException("simulated execution failure"));
 
-        assertEquals(2, KtestifyMain.run(new String[]{"features"}));
+        assertEquals(2, KtestifyMain.run(new String[] {"features"}));
 
         verify(registry).shutdown();
     }
@@ -121,9 +143,10 @@ class KtestifyMainTest {
     @Test
     void executionErrorStillShutsDownPluginsAndPropagates() {
         AssertionError error = new AssertionError("simulated execution error");
-        cucumber.when(() -> Main.run(any(String[].class), any(ClassLoader.class))).thenThrow(error);
+        cucumber.when(() -> Main.run(any(String[].class), any(ClassLoader.class)))
+                .thenThrow(error);
 
-        assertSame(error, assertThrows(AssertionError.class, () -> KtestifyMain.run(new String[]{"features"})));
+        assertSame(error, assertThrows(AssertionError.class, () -> KtestifyMain.run(new String[] {"features"})));
 
         verify(registry).shutdown();
     }
@@ -132,7 +155,7 @@ class KtestifyMainTest {
     void argumentPreparationFailureStillShutsDownPlugins() {
         when(registry.getGluePackages()).thenThrow(new IllegalStateException("simulated glue failure"));
 
-        assertEquals(2, KtestifyMain.run(new String[]{"features"}));
+        assertEquals(2, KtestifyMain.run(new String[] {"features"}));
 
         verify(registry).shutdown();
         cucumber.verifyNoInteractions();
@@ -143,7 +166,7 @@ class KtestifyMainTest {
         plugins.when(() -> PluginRegistry.load(any(PluginContext.class)))
                 .thenThrow(new PluginException("simulated init failure"));
 
-        assertEquals(2, KtestifyMain.run(new String[]{"features"}));
+        assertEquals(2, KtestifyMain.run(new String[] {"features"}));
 
         verifyNoInteractions(registry);
         cucumber.verifyNoInteractions();
@@ -151,7 +174,9 @@ class KtestifyMainTest {
 
     @Test
     void missingConfigFileAbortsBeforePluginInitialization(@TempDir Path tempDir) {
-        assertEquals(2, KtestifyMain.run(new String[]{"--config", tempDir.resolve("missing.conf").toString()}));
+        assertEquals(2, KtestifyMain.run(new String[] {
+            "--config", tempDir.resolve("missing.conf").toString()
+        }));
 
         plugins.verifyNoInteractions();
         cucumber.verifyNoInteractions();
@@ -163,7 +188,7 @@ class KtestifyMainTest {
         try (MockedStatic<KtestifyConfig> config = mockStatic(KtestifyConfig.class)) {
             config.when(KtestifyConfig::getOrLoad).thenThrow(new IllegalArgumentException("simulated config failure"));
 
-            assertEquals(2, KtestifyMain.run(new String[]{"features"}));
+            assertEquals(2, KtestifyMain.run(new String[] {"features"}));
         }
 
         plugins.verifyNoInteractions();
@@ -174,11 +199,11 @@ class KtestifyMainTest {
     void stripsExternalConfigOptionBeforeCallingCucumber(@TempDir Path tempDir) throws Exception {
         Path file = Files.writeString(tempDir.resolve("test.conf"), "");
 
-        assertEquals(0, KtestifyMain.run(new String[]{"--config", file.toString(), "features"}));
+        assertEquals(0, KtestifyMain.run(new String[] {"--config", file.toString(), "features"}));
 
         assertEquals(file.toAbsolutePath().toString(), System.getProperty("config.file"));
         cucumber.verify(() -> Main.run(
-                aryEq(new String[]{"--glue", "io.github.ktestify.steps", "--glue", "test.plugin.steps", "features"}),
+                aryEq(new String[] {"--glue", "io.github.ktestify.steps", "--glue", "test.plugin.steps", "features"}),
                 any(ClassLoader.class)));
         verify(registry).shutdown();
     }
@@ -203,7 +228,8 @@ class KtestifyMainTest {
                 ktestify.schema-registry.cache-capacity = 123
                 ktestify.schema-registry.auth.basic-auth-user-info = "must-not-be-logged"
                 ktestify.schema-registry.ssl.keystore-password = "must-not-be-logged"
-                """).withValue("ktestify.logging.level", com.typesafe.config.ConfigValueFactory.fromAnyRef(level)));
+                """)
+                .withValue("ktestify.logging.level", com.typesafe.config.ConfigValueFactory.fromAnyRef(level)));
 
         List<LogEvent> events = new ArrayList<>();
         AbstractAppender appender = new AbstractAppender("config-test", null, null, true, null) {
@@ -218,7 +244,7 @@ class KtestifyMainTest {
         appender.start();
         logger.addAppender(appender);
         try {
-            assertEquals(0, KtestifyMain.run(new String[]{"features"}));
+            assertEquals(0, KtestifyMain.run(new String[] {"features"}));
         } finally {
             logger.removeAppender(appender);
             logger.setLevel(originalLevel);
@@ -230,8 +256,9 @@ class KtestifyMainTest {
                 .toList();
         assertTrue(messages.contains("KTestify effective configuration"));
         assertTrue(messages.stream().anyMatch(message -> message.startsWith("read-timeout: ")));
-        assertFalse(messages.stream().anyMatch(message -> message.chars()
-                .anyMatch(character -> character >= 0x2500 && character <= 0x257F)));
+        assertFalse(messages.stream()
+                .anyMatch(
+                        message -> message.chars().anyMatch(character -> character >= 0x2500 && character <= 0x257F)));
         assertFalse(messages.stream().anyMatch(message -> message.contains("must-not-be-logged")));
         List<String> debugMessages = events.stream()
                 .filter(event -> event.getLevel() == Level.DEBUG)
@@ -253,8 +280,10 @@ class KtestifyMainTest {
                     "schema-registry.cache-capacity: 123",
                     "schema-registry.auth.user-info-configured: true")));
             assertTrue(debugMessages.stream().anyMatch(message -> message.startsWith("kafka.producer.linger-ms: ")));
-            assertTrue(debugMessages.stream().anyMatch(message -> message.startsWith("kafka.consumer.session-timeout: ")));
-            assertTrue(debugMessages.stream().anyMatch(message -> message.startsWith("schema-registry.compatibility-level: ")));
+            assertTrue(
+                    debugMessages.stream().anyMatch(message -> message.startsWith("kafka.consumer.session-timeout: ")));
+            assertTrue(debugMessages.stream()
+                    .anyMatch(message -> message.startsWith("schema-registry.compatibility-level: ")));
             assertTrue(debugMessages.stream().anyMatch(message -> message.startsWith("snapshot-mode: ")));
             assertTrue(debugMessages.stream().anyMatch(message -> message.startsWith("strict-matching: ")));
             assertTrue(debugMessages.stream().anyMatch(message -> message.startsWith("max-retries: ")));
