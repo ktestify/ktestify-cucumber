@@ -14,12 +14,20 @@ All notable changes to this project will be documented in this file.
 
 - Improve plugin initialization and error handling — [@nil-malh](https://github.com/nil-malh) ([#54](https://github.com/ktestify/ktestify-cucumber/pull/54))
 
+- Feat/linter (#55) — [@nil-malh](https://github.com/nil-malh) ([#55](https://github.com/ktestify/ktestify-cucumber/pull/55))
+
+- Add lint checks for domain-specific rules in feature files — [@nil-malh](https://github.com/nil-malh) ([#55](https://github.com/ktestify/ktestify-cucumber/pull/55))
+
+- Add lint subcommand for feature file validation — [@nil-malh](https://github.com/nil-malh) ([#55](https://github.com/ktestify/ktestify-cucumber/pull/55))
+
 
 ### 🧪 Tests
 
 - Added integration tests for first-party plugins — [@nil-malh](https://github.com/nil-malh) ([#54](https://github.com/ktestify/ktestify-cucumber/pull/54))
 
 - Update plugin integration tests to use fixed HTTP port and feature path — [@nil-malh](https://github.com/nil-malh) ([#54](https://github.com/ktestify/ktestify-cucumber/pull/54))
+
+- Added test for the linter — [@nil-malh](https://github.com/nil-malh) ([#55](https://github.com/ktestify/ktestify-cucumber/pull/55))
 
 
 ## [1.2.1] — 2026-10-11
