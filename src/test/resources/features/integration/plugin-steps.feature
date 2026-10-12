@@ -3,23 +3,23 @@ Feature: First-party plugin step integration
   Background:
     Given HTTP endpoints
       | endpointAlias | baseUrl          |
-      | http-main     | __HTTP_BASE_URL__ |
-      | http-second   | __HTTP_BASE_URL__ |
+      | http-main     | http://127.0.0.1:18765/api |
+      | http-second   | http://127.0.0.1:18765/api |
     Given HTTP bearer token
       | endpointAlias | token          |
       | http-main     | cucumber-token |
     Given HTTP assets directory
       | absolutePath       |
-      | __ASSETS_DIRECTORY__ |
+      | src/test/resources/data/integration/plugins |
     Given Azure Blob Storage containers
       | containerName             | containerAlias |
       | ktestify-plugin-it-json   | azure-json     |
       | ktestify-plugin-it-xml    | azure-xml      |
     Given Azure Blob assets directory
       | absolutePath       |
-      | __ASSETS_DIRECTORY__ |
+      | src/test/resources/data/integration/plugins |
 
-  @integration @httpPlugin
+  @pluginIntegration @httpPlugin
   Scenario: Send a file request with query parameters and validate a JSON response
     When HTTP request is sent
       | endpointAlias | method | path             | file                 | queryParams  | responseAlias |
@@ -34,11 +34,11 @@ Feature: First-party plugin step integration
       | responseAlias | header       | value            |
       | http-json     | Content-Type | application/json |
 
-  @integration @httpPlugin
+  @pluginIntegration @httpPlugin
   Scenario: Send an inline request through a singular endpoint and validate its response
     Given HTTP endpoint
       | endpointAlias | baseUrl          |
-      | http-inline   | __HTTP_BASE_URL__ |
+      | http-inline   | http://127.0.0.1:18765/api |
     When HTTP request is sent
       | endpointAlias | method | path   | body                                | responseAlias |
       | http-inline   | POST   | /echo  | {"message":"inline","id":"HTTP-002"} | http-inline   |
@@ -49,7 +49,7 @@ Feature: First-party plugin step integration
       | responseAlias | file                    |
       | http-inline   | http-inline-expected.json |
 
-  @integration @httpPlugin
+  @pluginIntegration @httpPlugin
   Scenario: Validate an XML response while excluding a volatile element
     When HTTP request is sent
       | endpointAlias | method | path        | responseAlias |
@@ -58,13 +58,13 @@ Feature: First-party plugin step integration
       | responseAlias | file              | excludedElements |
       | http-xml      | http-expected.xml | processedAt      |
 
-  @integration @httpPlugin
+  @pluginIntegration @httpPlugin
   Scenario: Poll an endpoint until its expected status is returned
     Then HTTP endpoint should eventually return
       | endpointAlias | method | path          | expectedStatus | readTimeout | queryParams |
       | http-main     | GET    | /orders/status | 200            | 5           | order=1     |
 
-  @integration @azureBlobPlugin
+  @pluginIntegration @azureBlobPlugin
   Scenario: Upload a blob, assert JSON content, and check existence and absence
     When blob is uploaded from file
       | containerAlias | file                | blobName              |
@@ -79,7 +79,7 @@ Feature: First-party plugin step integration
       | containerAlias | blobName                   | readTimeout |
       | azure-json     | integration/missing.json   | 2           |
 
-  @integration @azureBlobPlugin
+  @pluginIntegration @azureBlobPlugin
   Scenario: Register one container and compare uploaded XML content
     Given Azure Blob Storage container
       | containerName           | containerAlias |

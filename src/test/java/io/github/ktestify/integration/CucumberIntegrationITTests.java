@@ -127,8 +127,10 @@ class CucumberIntegrationITTests {
     private static GenericContainer<?> schemaRegistryContainer;
     private static GenericContainer<?> azuriteContainer;
     private static HttpServer httpServer;
-    private static String httpBaseUrl;
-    private static Path pluginFeature;
+    /** Must match the {@code baseUrl} declared in {@code plugin-steps.feature}. */
+    private static final int HTTP_PORT = 18765;
+
+    private static final String PLUGIN_FEATURE = "src/test/resources/features/integration/plugin-steps.feature";
     private static final AtomicInteger successfulPollRequests = new AtomicInteger();
     private static final ConcurrentLinkedQueue<CapturedRequest> httpRequests = new ConcurrentLinkedQueue<>();
     private static final ConcurrentLinkedQueue<CapturedRequest> notificationRequests = new ConcurrentLinkedQueue<>();
@@ -194,7 +196,6 @@ class CucumberIntegrationITTests {
         provisionTopics(bootstrapServers);
         registerSchemas(schemaRegistryUrl);
         provisionAzureContainers();
-        generatePluginFeature();
     }
 
     @AfterAll
@@ -252,7 +253,7 @@ class CucumberIntegrationITTests {
     @Test
     @Order(2)
     void runsFirstPartyPluginGherkinScenariosAndNotifiesOnSuccess() throws Exception {
-        int exitCode = runCucumber("@integration", pluginFeature.toString());
+        int exitCode = runCucumber("@pluginIntegration", PLUGIN_FEATURE);
 
         assertEquals(0, exitCode, "A first-party plugin Gherkin scenario failed.");
         assertHttpPluginRequests();
@@ -271,7 +272,7 @@ class CucumberIntegrationITTests {
     @Test
     @Order(3)
     void reportsPluginFailurePathsWithoutMaskingTheirCucumberResult() throws Exception {
-        int exitCode = runCucumber("@pluginFailure", pluginFeature.toString());
+        int exitCode = runCucumber("@pluginFailure", PLUGIN_FEATURE);
 
         assertEquals(1, exitCode, "The negative plugin scenarios should fail inside Cucumber.");
 
@@ -432,39 +433,10 @@ class CucumberIntegrationITTests {
         return KtestifyMain.run(cucumberArgs.toArray(String[]::new));
     }
 
-    private static void generatePluginFeature() throws IOException {
-        String template;
-        try (var input = CucumberIntegrationITTests.class.getResourceAsStream(
-                "/features/integration/plugin-steps.feature")) {
-            if (input == null) {
-                throw new IOException("Plugin integration feature template was not found on the test classpath.");
-            }
-            template = new String(input.readAllBytes(), StandardCharsets.UTF_8);
-        }
-
-        String pluginAssets = Path.of(resolveAssetsDir(), "integration", "plugins")
-                .toAbsolutePath()
-                .normalize()
-                .toString()
-                .replace('\\', '/');
-        String feature = template
-                .replace("__HTTP_BASE_URL__", httpBaseUrl)
-                .replace("__ASSETS_DIRECTORY__", pluginAssets);
-        if (feature.contains("__HTTP_BASE_URL__") || feature.contains("__ASSETS_DIRECTORY__")) {
-            throw new IOException("Plugin integration feature contains unresolved runtime values.");
-        }
-
-        Path generatedDirectory = Path.of("target", "generated-test-features");
-        Files.createDirectories(generatedDirectory);
-        pluginFeature = generatedDirectory.resolve("plugin-steps.feature").toAbsolutePath();
-        Files.writeString(pluginFeature, feature, StandardCharsets.UTF_8);
-    }
-
     private static void startHttpServer() throws IOException {
-        httpServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        httpServer = HttpServer.create(new InetSocketAddress("127.0.0.1", HTTP_PORT), 0);
         httpServer.createContext("/", CucumberIntegrationITTests::handleHttpRequest);
         httpServer.start();
-        httpBaseUrl = "http://127.0.0.1:" + httpServer.getAddress().getPort() + "/api";
     }
 
     private static void handleHttpRequest(HttpExchange exchange) throws IOException {
