@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### ♻️ Refactoring
+
+- Improve logging format and update version in documentation — [@nil-malh](https://github.com/nil-malh) ([#54](https://github.com/ktestify/ktestify-cucumber/pull/54))
+
+
+### ✨ Features
+
+- Feat/plugins integration tests (#54) — [@nil-malh](https://github.com/nil-malh) ([#54](https://github.com/ktestify/ktestify-cucumber/pull/54))
+
+- Improve plugin initialization and error handling — [@nil-malh](https://github.com/nil-malh) ([#54](https://github.com/ktestify/ktestify-cucumber/pull/54))
+
+
+### 🧪 Tests
+
+- Added integration tests for first-party plugins — [@nil-malh](https://github.com/nil-malh) ([#54](https://github.com/ktestify/ktestify-cucumber/pull/54))
+
+- Update plugin integration tests to use fixed HTTP port and feature path — [@nil-malh](https://github.com/nil-malh) ([#54](https://github.com/ktestify/ktestify-cucumber/pull/54))
+
+
 ## [1.2.1] — 2026-10-11
 
 ### ♻️ Refactoring
