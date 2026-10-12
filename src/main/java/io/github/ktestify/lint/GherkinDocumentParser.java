@@ -66,7 +66,7 @@ public final class GherkinDocumentParser {
                 violations.add(toViolation(envelope.getParseError().get()));
             }
             if (envelope.getGherkinDocument().isPresent()) {
-                document = Optional.of(envelope.getGherkinDocument().get());
+                document = envelope.getGherkinDocument();
             }
         }
         return new ParseResult(document, violations);

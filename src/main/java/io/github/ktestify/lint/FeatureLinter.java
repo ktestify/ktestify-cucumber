@@ -31,13 +31,14 @@ import java.util.stream.Stream;
  * <p>Combines three passes:
  *
  * <ol>
- *   <li>{@link GherkinDocumentParser} — Cucumber's own parser; every parse error becomes a violation, so a file
+ *   <li>{@link GherkinDocumentParser}: Cucumber's own parser; every parse error becomes a violation, so a file
  *       Cucumber cannot run always fails the lint run
- *   <li>{@link StructureLintChecks} — raw-line formatting rules ({@code G001}–{@code G013})
- *   <li>{@link DomainLintChecks} — ktestify-specific semantic rules ({@code D001}–{@code D004}) over the parsed AST
+ *   <li>{@link StructureLintChecks}: raw-line formatting rules ({@code G001} to {@code G013})
+ *   <li>{@link DomainLintChecks}: ktestify-specific semantic rules ({@code D001} to {@code D004}) over the parsed
+ *       AST
  * </ol>
  *
- * <p>Structural AST rules ({@code G004}–{@code G017}) are covered by the parser itself: a file that parses cleanly has
+ * <p>Structural AST rules ({@code G004} to {@code G017}) are covered by the parser itself: a file that parses cleanly has
  * exactly one named Feature, named scenarios, well-formed tables with consistent column counts, and no steps outside a
  * Background or Scenario.
  *
@@ -66,10 +67,9 @@ public final class FeatureLinter {
      * @since 1.2.2
      */
     public List<LintViolation> lint(Path featurePath) throws IOException {
-        List<LintViolation> violations = new ArrayList<>();
 
         String text = Files.readString(featurePath, StandardCharsets.UTF_8);
-        violations.addAll(StructureLintChecks.check(text, options));
+        List<LintViolation> violations = new ArrayList<>(StructureLintChecks.check(text, options));
 
         GherkinDocumentParser.ParseResult parse = GherkinDocumentParser.parse(featurePath);
         violations.addAll(parse.violations());

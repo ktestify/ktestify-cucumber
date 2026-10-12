@@ -254,9 +254,7 @@ final class DomainLintChecks {
         List<Step> steps = new ArrayList<>();
         for (FeatureChild child : feature.getChildren()) {
             Optional<Background> background = child.getBackground();
-            if (background.isPresent()) {
-                steps.addAll(background.get().getSteps());
-            }
+            background.ifPresent(value -> steps.addAll(value.getSteps()));
         }
         return steps;
     }

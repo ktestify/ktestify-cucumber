@@ -21,8 +21,8 @@ package io.github.ktestify.lint;
  * <p>Rules are grouped in two families:
  *
  * <ul>
- *   <li>{@code G*} — structural and formatting correctness of the Gherkin file itself
- *   <li>{@code D*} — semantic correctness specific to the ktestify test style (aliases, asset files)
+ *   <li>{@code G*}: structural and formatting correctness of the Gherkin file itself
+ *   <li>{@code D*}: semantic correctness specific to the ktestify test style (aliases, asset files)
  * </ul>
  *
  * @since 1.2.2
