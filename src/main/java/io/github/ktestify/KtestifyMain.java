@@ -18,12 +18,14 @@ package io.github.ktestify;
 import io.cucumber.core.cli.Main;
 import io.github.ktestify.banner.KtestifyBanner;
 import io.github.ktestify.config.KtestifyConfig;
+import io.github.ktestify.exceptions.PluginException;
 import io.github.ktestify.plugin.PluginContext;
 import io.github.ktestify.plugin.PluginRegistry;
-import java.util.ArrayList;
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Docker / CLI entry point for ktestify-cucumber.
@@ -84,7 +86,7 @@ public class KtestifyMain {
 
     private static final Logger LOG = LoggerFactory.getLogger(KtestifyMain.class);
 
-    private static final String DEFAULT_GLUE = "io.github.ktestify";
+    private static final String DEFAULT_GLUE = "io.github.ktestify.steps";
     private static final String DEFAULT_FEATURES_ENV = "KTESTIFY_FEATURES_PATH";
     private static final String DEFAULT_FEATURES_PATH = "src/test/resources/features";
     //  private static final String REPORTS_DIR = "target/cucumber-reports";
@@ -95,34 +97,49 @@ public class KtestifyMain {
     private static final String TYPESAFE_CONFIG_FILE_PROP = "config.file";
 
     static void main(String[] args) {
-        KtestifyBanner.print();
-        // ── 0. Wire external config file BEFORE the singleton loads ──────────
-        applyExternalConfigFile(args);
-
-        // ── 1. Eagerly load and log effective config ──────────────────────────
-        logEffectiveConfig();
-
-        // ── 2. Initialize plugin system ───────────────────────────────────────
-        PluginContext pluginCtx = KtestifyConfig::getOrLoad;
-        PluginRegistry pluginRegistry = initPlugins(pluginCtx);
-
-        // ── 3. Strip --config from args so Cucumber CLI doesn't see it ────────
-        List<String> pluginGlue = pluginRegistry.getGluePackages();
-        String[] cucumberArgs = buildArgs(stripConfigArg(args), pluginGlue);
-        LOG.info("Starting ktestify-cucumber — effective args: {}", (Object) cucumberArgs);
-
-        byte exitCode = Main.run(cucumberArgs, Thread.currentThread().getContextClassLoader());
-        LOG.info("Cucumber finished with exit code {}", exitCode);
-
-        // ── 4. Shutdown plugins before exit ───────────────────────────────────
-        pluginRegistry.shutdown();
-
-        System.exit(exitCode);
+        System.exit(run(args));
     }
 
-    // -------------------------------------------------------------------------
-    // Package-private — tested directly
-    // -------------------------------------------------------------------------
+    /**
+     * Runs the CLI without terminating the JVM. Returns Cucumber's exit code, or {@code 2} for startup or execution
+     * errors. Plugins are shut down before returning, including when argument preparation or execution fails.
+     *
+     * @param args raw CLI arguments
+     * @return the command exit code
+     * @since 1.2.2
+     */
+    public static int run(String[] args) {
+        PluginRegistry pluginRegistry = null;
+        try {
+            KtestifyBanner.print();
+            applyExternalConfigFile(args);
+            logEffectiveConfig();
+
+            PluginContext pluginCtx = KtestifyConfig::getOrLoad;
+            pluginRegistry = initPlugins(pluginCtx);
+
+            List<String> pluginGlue = pluginRegistry.getGluePackages();
+            String[] cucumberArgs = buildArgs(stripConfigArg(args), pluginGlue);
+            LOG.info("Starting ktestify-cucumber, effective args: {}", (Object) cucumberArgs);
+
+            byte exitCode = Main.run(cucumberArgs, Thread.currentThread().getContextClassLoader());
+            LOG.info("Cucumber finished with exit code {}", exitCode);
+            return exitCode;
+        } catch (Exception | java.util.ServiceConfigurationError e) {
+            LOG.error("ktestify-cucumber failed to start or execute.", e);
+            return 2;
+        } finally {
+            if (pluginRegistry != null) {
+                pluginRegistry.shutdown();
+            }
+        }
+    }
+
+    /*
+     * -------------------------------------------------------------------------
+     * Package-private: tested directly
+     * -------------------------------------------------------------------------
+     */
 
     /**
      * Builds the final argument array for the Cucumber CLI. If the caller supplies arguments they are used as-is (with
@@ -173,8 +190,7 @@ public class KtestifyMain {
         if (configPath != null && !configPath.isBlank()) {
             java.io.File file = new java.io.File(configPath);
             if (!file.exists()) {
-                LOG.error("Config file not found: '{}'. Aborting.", configPath);
-                System.exit(2);
+                throw new IllegalArgumentException("Config file not found: '" + configPath + "'.");
             }
             // Tell Typesafe Config to use this file as the primary config source
             System.setProperty(TYPESAFE_CONFIG_FILE_PROP, file.getAbsolutePath());
@@ -217,19 +233,60 @@ public class KtestifyMain {
     private static void logEffectiveConfig() {
         try {
             KtestifyConfig cfg = KtestifyConfig.getOrLoad();
-            LOG.info("╔══ KTestify effective configuration ═══════════════════════════");
-            LOG.info("║  kafka.bootstrap-servers : {}", cfg.getKafka().getBootstrapServers());
-            LOG.info("║  schema-registry.url     : {}", cfg.getSchemaRegistry().getUrl());
-            LOG.info("║  read-timeout            : {}ms", cfg.getFramework().getDefaultReadTimeoutMillis());
-            LOG.info("║  consumer-delta-time     : {}s", cfg.getFramework().getConsumerDeltaTimeSeconds());
+            LOG.info("KTestify effective configuration");
+            LOG.info("kafka.bootstrap-servers: {}", cfg.getKafka().getBootstrapServers());
+            LOG.info("schema-registry.url: {}", cfg.getSchemaRegistry().getUrl());
+            LOG.info("read-timeout: {}ms", cfg.getFramework().getDefaultReadTimeoutMillis());
+            LOG.info("consumer-delta-time: {}s", cfg.getFramework().getConsumerDeltaTimeSeconds());
             LOG.info(
-                    "║  assets-directory        : '{}'",
+                    "assets-directory: '{}'",
                     cfg.getFramework().getAssetsDirectory().orElse("<not set>"));
-            LOG.info("╚═══════════════════════════════════════════════════════════════");
+            LOG.debug("poll-interval: {}ms", cfg.getFramework().getPollIntervalMillis());
+            LOG.debug("buffer-time: {}ms", cfg.getFramework().getBufferTimeMillis());
+            LOG.debug("schemas-directory: '{}'", cfg.getFramework().getSchemasDirectory().orElse("<not set>"));
+            LOG.debug("output-directory: '{}'", cfg.getFramework().getOutputDirectory().orElse("<not set>"));
+            LOG.debug("snapshot-mode: {}", cfg.getFramework().isSnapshotMode());
+            LOG.debug("strict-matching: {}", cfg.getFramework().isStrictMatching());
+            LOG.debug("max-retries: {}", cfg.getFramework().getMaxRetries());
+            LOG.debug("reporting.enabled: {}", cfg.getFramework().isEnableReporting());
+            LOG.debug("reporting.format: '{}'", cfg.getFramework().getReportFormat());
+            LOG.debug("reporting.output: '{}'", cfg.getFramework().getReportOutputDirectory());
+            var kafka = cfg.getKafka();
+            LOG.debug("kafka.topic-namespace: '{}'", kafka.getTopicNamespace().orElse("<not set>"));
+            LOG.debug("kafka.security-protocol: {}", kafka.getSecurityProtocol());
+            LOG.debug("kafka.security.sasl-mechanism: {}", kafka.getSaslMechanism().orElse("<not set>"));
+            LOG.debug("kafka.security.sasl-jaas-configured: {}", kafka.getSaslJaasConfig().isPresent());
+            LOG.debug("kafka.security.truststore-configured: {}", kafka.getSslTruststoreLocation().isPresent());
+            LOG.debug("kafka.security.keystore-configured: {}", kafka.getSslKeystoreLocation().isPresent());
+            LOG.debug("kafka.producer.acks: {}", kafka.getProducerAcks());
+            LOG.debug("kafka.producer.retries: {}", kafka.getProducerRetries());
+            LOG.debug("kafka.producer.batch-size: {} bytes", kafka.getProducerBatchSize());
+            LOG.debug("kafka.producer.linger-ms: {}ms", kafka.getProducerLingerMs().toMillis());
+            LOG.debug("kafka.producer.buffer-memory: {} bytes", kafka.getProducerBufferMemory());
+            LOG.debug("kafka.producer.key-serializer: {}", kafka.getProducerKeySerializer());
+            LOG.debug("kafka.producer.value-serializer: {}", kafka.getProducerValueSerializer());
+            LOG.debug("kafka.consumer.group-id: '{}'", kafka.getConsumerGroupId());
+            LOG.debug("kafka.consumer.enable-auto-commit: {}", kafka.isConsumerEnableAutoCommit());
+            LOG.debug("kafka.consumer.auto-offset-reset: {}", kafka.getConsumerAutoOffsetReset());
+            LOG.debug("kafka.consumer.session-timeout: {}ms", kafka.getConsumerSessionTimeout().toMillis());
+            LOG.debug("kafka.consumer.heartbeat-interval: {}ms", kafka.getConsumerHeartbeatInterval().toMillis());
+            LOG.debug("kafka.consumer.max-poll-records: {}", kafka.getConsumerMaxPollRecords());
+            LOG.debug("kafka.consumer.key-deserializer: {}", kafka.getConsumerKeyDeserializer());
+            LOG.debug("kafka.consumer.value-deserializer: {}", kafka.getConsumerValueDeserializer());
+            var schemaRegistry = cfg.getSchemaRegistry();
+            LOG.debug("schema-registry.cache-capacity: {}", schemaRegistry.getCacheCapacity());
+            LOG.debug("schema-registry.auto-register-schemas: {}", schemaRegistry.isAutoRegisterSchemas());
+            LOG.debug("schema-registry.compatibility-level: {}", schemaRegistry.getCompatibilityLevel());
+            LOG.debug(
+                    "schema-registry.auth.credentials-source: {}",
+                    schemaRegistry.getBasicAuthCredentialsSource().orElse("<not set>"));
+            LOG.debug("schema-registry.auth.user-info-configured: {}", schemaRegistry.getBasicAuthUserInfo().isPresent());
+            LOG.debug("schema-registry.ssl.truststore-configured: {}", schemaRegistry.getSslTruststoreLocation().isPresent());
+            LOG.debug("schema-registry.ssl.keystore-configured: {}", schemaRegistry.getSslKeystoreLocation().isPresent());
         } catch (Exception e) {
             LOG.error("Failed to load ktestify configuration: {}", e.getMessage());
             LOG.error("Check your environment variables or -D system properties.");
-            System.exit(2);
+            throw new IllegalStateException("Failed to load ktestify configuration.", e);
         }
     }
 
@@ -349,8 +406,7 @@ public class KtestifyMain {
             return PluginRegistry.load(ctx);
         } catch (Exception e) {
             LOG.error("Fatal: plugin system failed to initialize — {}", e.getMessage(), e);
-            System.exit(2);
-            throw new IllegalStateException("unreachable");
+            throw new PluginException("Plugin system failed to initialize.", e);
         }
     }
 }
