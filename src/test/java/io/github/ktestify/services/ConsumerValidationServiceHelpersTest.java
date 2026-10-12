@@ -225,8 +225,8 @@ class ConsumerValidationServiceHelpersTest {
         @Test
         @DisplayName("returns true for timeout-style messages")
         void trueForFetchTimeoutType() throws Exception {
-            ConsumerException failure =
-                    new ConsumerException("wrapped", new FetchTimeoutException("Timed out after 1000ms waiting for a record."));
+            ConsumerException failure = new ConsumerException(
+                    "wrapped", new FetchTimeoutException("Timed out after 1000ms waiting for a record."));
             assertTrue(invokeIsTimeoutLikeFailure(failure));
         }
 
@@ -279,6 +279,7 @@ class ConsumerValidationServiceHelpersTest {
         m.setAccessible(true);
         return (KeyMatchStrategy) m.invoke(null, row);
     }
+
     private static boolean invokeIsTimeoutLikeFailure(Throwable failure) throws Exception {
         Method m = ConsumerValidationService.class.getDeclaredMethod("isTimeoutLikeFailure", Throwable.class);
         m.setAccessible(true);
