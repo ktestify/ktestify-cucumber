@@ -89,8 +89,7 @@ class CucumberIntegrationITTests {
             DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite:3.35.0");
     private static final String AZURITE_ACCOUNT_KEY =
             "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
-    private static final List<String> AZURE_CONTAINERS =
-            List.of("ktestify-plugin-it-json", "ktestify-plugin-it-xml");
+    private static final List<String> AZURE_CONTAINERS = List.of("ktestify-plugin-it-json", "ktestify-plugin-it-xml");
 
     // ── Topics required by all @integration scenarios ──────────────────────────────────────────
     private static final List<String> INTEGRATION_TOPICS =
@@ -259,14 +258,17 @@ class CucumberIntegrationITTests {
         assertHttpPluginRequests();
 
         JsonNode summary = notificationSummary("/notifications/webhook");
-        assertEquals("KTestify plugin integration tests", summary.path("suiteName").asText());
+        assertEquals(
+                "KTestify plugin integration tests", summary.path("suiteName").asText());
         assertEquals("PASSED", summary.path("status").asText());
         assertEquals(6, summary.path("totalCount").asInt());
         assertEquals(6, summary.path("passedCount").asInt());
         assertEquals(0, summary.path("failedCount").asInt());
         assertFalse(hasNotification("/notifications/slack"));
         assertTrue(hasNotification("/notifications/teams"));
-        assertTrue(new ObjectMapper().readTree(notificationBody("/notifications/teams")).isObject());
+        assertTrue(new ObjectMapper()
+                .readTree(notificationBody("/notifications/teams"))
+                .isObject());
     }
 
     @Test
@@ -281,7 +283,9 @@ class CucumberIntegrationITTests {
         assertEquals(10, summary.path("totalCount").asInt());
         assertEquals(10, summary.path("failedCount").asInt());
         assertTrue(hasNotification("/notifications/slack"));
-        assertTrue(new ObjectMapper().readTree(notificationBody("/notifications/slack")).isObject());
+        assertTrue(new ObjectMapper()
+                .readTree(notificationBody("/notifications/slack"))
+                .isObject());
         assertTrue(hasNotification("/notifications/teams"));
         assertEquals(3, notificationRequests.size());
     }
@@ -383,14 +387,20 @@ class CucumberIntegrationITTests {
         System.out.printf("[CucumberIntegrationIT] Assets directory        : %s%n", assetsDir);
 
         Config overrides = ConfigFactory.parseMap(Map.of(
-                "ktestify.kafka.bootstrap-servers", bootstrapServers,
-                "ktestify.schema-registry.url", schemaRegistryUrl,
-                "ktestify.framework.directories.assets", assetsDir,
-                "ktestify.framework.reporting.enabled", false,
-                "ktestify.plugins.http", Map.of("poll-interval", "50ms"),
+                "ktestify.kafka.bootstrap-servers",
+                bootstrapServers,
+                "ktestify.schema-registry.url",
+                schemaRegistryUrl,
+                "ktestify.framework.directories.assets",
+                assetsDir,
+                "ktestify.framework.reporting.enabled",
+                false,
+                "ktestify.plugins.http",
+                Map.of("poll-interval", "50ms"),
                 "ktestify.plugins.azure-blob",
-                        Map.of("connection-string", azuriteConnectionString, "poll-interval", "50ms"),
-                "ktestify.plugins.notifications", notificationsConfig(notificationBaseUrl)));
+                Map.of("connection-string", azuriteConnectionString, "poll-interval", "50ms"),
+                "ktestify.plugins.notifications",
+                notificationsConfig(notificationBaseUrl)));
 
         KtestifyConfig.reset();
         KtestifyConfig.load(overrides);
@@ -423,12 +433,7 @@ class CucumberIntegrationITTests {
         clearAzureContainers();
 
         List<String> cucumberArgs = new ArrayList<>(List.of(
-                "--tags",
-                tags,
-                "--plugin",
-                "json:target/cucumber-reports/cucumber.json",
-                "--plugin",
-                "pretty"));
+                "--tags", tags, "--plugin", "json:target/cucumber-reports/cucumber.json", "--plugin", "pretty"));
         cucumberArgs.addAll(List.of(features));
         return KtestifyMain.run(cucumberArgs.toArray(String[]::new));
     }
@@ -468,11 +473,12 @@ class CucumberIntegrationITTests {
                 }
             }
             case "/api/echo" -> respond(exchange, 200, "application/json", request.body() + "\n");
-            case "/api/orders/xml" -> respond(
-                    exchange,
-                    200,
-                    "application/xml",
-                    "<order><id>HTTP-XML-001</id><processedAt>volatile</processedAt></order>");
+            case "/api/orders/xml" ->
+                respond(
+                        exchange,
+                        200,
+                        "application/xml",
+                        "<order><id>HTTP-XML-001</id><processedAt>volatile</processedAt></order>");
             case "/api/orders/status" -> {
                 int status = successfulPollRequests.incrementAndGet() < 3 ? 202 : 200;
                 respond(exchange, status, "application/json", "{}");
@@ -483,8 +489,7 @@ class CucumberIntegrationITTests {
         }
     }
 
-    private static void respond(HttpExchange exchange, int status, String contentType, String body)
-            throws IOException {
+    private static void respond(HttpExchange exchange, int status, String contentType, String body) throws IOException {
         byte[] responseBody = body.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", contentType);
         exchange.sendResponseHeaders(status, responseBody.length);
@@ -500,17 +505,22 @@ class CucumberIntegrationITTests {
     }
 
     private static void provisionAzureContainers() {
-        BlobServiceClient blobService =
-                new BlobServiceClientBuilder().connectionString(azuriteConnectionString()).buildClient();
-        AZURE_CONTAINERS.forEach(name -> blobService.getBlobContainerClient(name).createIfNotExists());
+        BlobServiceClient blobService = new BlobServiceClientBuilder()
+                .connectionString(azuriteConnectionString())
+                .buildClient();
+        AZURE_CONTAINERS.forEach(
+                name -> blobService.getBlobContainerClient(name).createIfNotExists());
     }
 
     private static void clearAzureContainers() {
-        BlobServiceClient blobService =
-                new BlobServiceClientBuilder().connectionString(azuriteConnectionString()).buildClient();
+        BlobServiceClient blobService = new BlobServiceClientBuilder()
+                .connectionString(azuriteConnectionString())
+                .buildClient();
         for (String name : AZURE_CONTAINERS) {
             BlobContainerClient container = blobService.getBlobContainerClient(name);
-            container.listBlobs().forEach(blob -> container.getBlobClient(blob.getName()).deleteIfExists());
+            container
+                    .listBlobs()
+                    .forEach(blob -> container.getBlobClient(blob.getName()).deleteIfExists());
         }
     }
 
@@ -527,7 +537,9 @@ class CucumberIntegrationITTests {
 
         assertTrue(httpRequests.stream().anyMatch(request -> request.path().equals("/api/echo")));
         assertTrue(httpRequests.stream().anyMatch(request -> request.path().equals("/api/orders/xml")));
-        assertTrue(httpRequests.stream().filter(request -> request.path().startsWith("/api/orders/status")).count()
+        assertTrue(httpRequests.stream()
+                        .filter(request -> request.path().startsWith("/api/orders/status"))
+                        .count()
                 >= 3);
     }
 

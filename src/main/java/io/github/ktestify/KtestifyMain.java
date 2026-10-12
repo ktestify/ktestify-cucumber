@@ -81,6 +81,13 @@ import java.util.List;
  *   <li>Glue: {@code io.github.ktestify} (always injected)
  *   <li>Plugins: {@code pretty}, JSON report, {@code CucumberReportr}
  * </ul>
+ *
+ * <h2>Lint subcommand</h2>
+ *
+ * <p>{@code java -jar ktestify-cucumber.jar lint <paths> [options]} lints {@code .feature} files (formatting, alias
+ * declaration, asset file existence) and exits before any Cucumber or plugin startup. See
+ * {@link io.github.ktestify.lint.KtestifyLintMain} for the options. Exit code {@code 0} when clean, {@code 1} when any
+ * ERROR-severity violation is found, {@code 2} on usage errors.
  */
 public class KtestifyMain {
 
@@ -104,11 +111,19 @@ public class KtestifyMain {
      * Runs the CLI without terminating the JVM. Returns Cucumber's exit code, or {@code 2} for startup or execution
      * errors. Plugins are shut down before returning, including when argument preparation or execution fails.
      *
+     * <p>When the first argument is {@code lint}, the run delegates to the feature linter
+     * ({@link io.github.ktestify.lint.KtestifyLintMain}) and exits before any Cucumber or plugin startup.
+     *
      * @param args raw CLI arguments
      * @return the command exit code
      * @since 1.2.2
      */
     public static int run(String[] args) {
+        if (args != null && args.length > 0 && "lint".equals(args[0])) {
+            String[] lintArgs = new String[args.length - 1];
+            System.arraycopy(args, 1, lintArgs, 0, lintArgs.length);
+            return io.github.ktestify.lint.KtestifyLintMain.main0(lintArgs);
+        }
         PluginRegistry pluginRegistry = null;
         try {
             KtestifyBanner.print();
@@ -243,8 +258,12 @@ public class KtestifyMain {
                     cfg.getFramework().getAssetsDirectory().orElse("<not set>"));
             LOG.debug("poll-interval: {}ms", cfg.getFramework().getPollIntervalMillis());
             LOG.debug("buffer-time: {}ms", cfg.getFramework().getBufferTimeMillis());
-            LOG.debug("schemas-directory: '{}'", cfg.getFramework().getSchemasDirectory().orElse("<not set>"));
-            LOG.debug("output-directory: '{}'", cfg.getFramework().getOutputDirectory().orElse("<not set>"));
+            LOG.debug(
+                    "schemas-directory: '{}'",
+                    cfg.getFramework().getSchemasDirectory().orElse("<not set>"));
+            LOG.debug(
+                    "output-directory: '{}'",
+                    cfg.getFramework().getOutputDirectory().orElse("<not set>"));
             LOG.debug("snapshot-mode: {}", cfg.getFramework().isSnapshotMode());
             LOG.debug("strict-matching: {}", cfg.getFramework().isStrictMatching());
             LOG.debug("max-retries: {}", cfg.getFramework().getMaxRetries());
@@ -254,22 +273,36 @@ public class KtestifyMain {
             var kafka = cfg.getKafka();
             LOG.debug("kafka.topic-namespace: '{}'", kafka.getTopicNamespace().orElse("<not set>"));
             LOG.debug("kafka.security-protocol: {}", kafka.getSecurityProtocol());
-            LOG.debug("kafka.security.sasl-mechanism: {}", kafka.getSaslMechanism().orElse("<not set>"));
-            LOG.debug("kafka.security.sasl-jaas-configured: {}", kafka.getSaslJaasConfig().isPresent());
-            LOG.debug("kafka.security.truststore-configured: {}", kafka.getSslTruststoreLocation().isPresent());
-            LOG.debug("kafka.security.keystore-configured: {}", kafka.getSslKeystoreLocation().isPresent());
+            LOG.debug(
+                    "kafka.security.sasl-mechanism: {}",
+                    kafka.getSaslMechanism().orElse("<not set>"));
+            LOG.debug(
+                    "kafka.security.sasl-jaas-configured: {}",
+                    kafka.getSaslJaasConfig().isPresent());
+            LOG.debug(
+                    "kafka.security.truststore-configured: {}",
+                    kafka.getSslTruststoreLocation().isPresent());
+            LOG.debug(
+                    "kafka.security.keystore-configured: {}",
+                    kafka.getSslKeystoreLocation().isPresent());
             LOG.debug("kafka.producer.acks: {}", kafka.getProducerAcks());
             LOG.debug("kafka.producer.retries: {}", kafka.getProducerRetries());
             LOG.debug("kafka.producer.batch-size: {} bytes", kafka.getProducerBatchSize());
-            LOG.debug("kafka.producer.linger-ms: {}ms", kafka.getProducerLingerMs().toMillis());
+            LOG.debug(
+                    "kafka.producer.linger-ms: {}ms",
+                    kafka.getProducerLingerMs().toMillis());
             LOG.debug("kafka.producer.buffer-memory: {} bytes", kafka.getProducerBufferMemory());
             LOG.debug("kafka.producer.key-serializer: {}", kafka.getProducerKeySerializer());
             LOG.debug("kafka.producer.value-serializer: {}", kafka.getProducerValueSerializer());
             LOG.debug("kafka.consumer.group-id: '{}'", kafka.getConsumerGroupId());
             LOG.debug("kafka.consumer.enable-auto-commit: {}", kafka.isConsumerEnableAutoCommit());
             LOG.debug("kafka.consumer.auto-offset-reset: {}", kafka.getConsumerAutoOffsetReset());
-            LOG.debug("kafka.consumer.session-timeout: {}ms", kafka.getConsumerSessionTimeout().toMillis());
-            LOG.debug("kafka.consumer.heartbeat-interval: {}ms", kafka.getConsumerHeartbeatInterval().toMillis());
+            LOG.debug(
+                    "kafka.consumer.session-timeout: {}ms",
+                    kafka.getConsumerSessionTimeout().toMillis());
+            LOG.debug(
+                    "kafka.consumer.heartbeat-interval: {}ms",
+                    kafka.getConsumerHeartbeatInterval().toMillis());
             LOG.debug("kafka.consumer.max-poll-records: {}", kafka.getConsumerMaxPollRecords());
             LOG.debug("kafka.consumer.key-deserializer: {}", kafka.getConsumerKeyDeserializer());
             LOG.debug("kafka.consumer.value-deserializer: {}", kafka.getConsumerValueDeserializer());
@@ -280,9 +313,15 @@ public class KtestifyMain {
             LOG.debug(
                     "schema-registry.auth.credentials-source: {}",
                     schemaRegistry.getBasicAuthCredentialsSource().orElse("<not set>"));
-            LOG.debug("schema-registry.auth.user-info-configured: {}", schemaRegistry.getBasicAuthUserInfo().isPresent());
-            LOG.debug("schema-registry.ssl.truststore-configured: {}", schemaRegistry.getSslTruststoreLocation().isPresent());
-            LOG.debug("schema-registry.ssl.keystore-configured: {}", schemaRegistry.getSslKeystoreLocation().isPresent());
+            LOG.debug(
+                    "schema-registry.auth.user-info-configured: {}",
+                    schemaRegistry.getBasicAuthUserInfo().isPresent());
+            LOG.debug(
+                    "schema-registry.ssl.truststore-configured: {}",
+                    schemaRegistry.getSslTruststoreLocation().isPresent());
+            LOG.debug(
+                    "schema-registry.ssl.keystore-configured: {}",
+                    schemaRegistry.getSslKeystoreLocation().isPresent());
         } catch (Exception e) {
             LOG.error("Failed to load ktestify configuration: {}", e.getMessage());
             LOG.error("Check your environment variables or -D system properties.");
