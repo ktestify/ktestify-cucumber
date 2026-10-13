@@ -15,9 +15,9 @@
  */
 package io.github.ktestify.lint;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
 
 class KtestifyLintMainTest {
 
@@ -65,7 +65,8 @@ class KtestifyLintMainTest {
 
     @Test
     void codeclimateFormatRuns() {
-        assertEquals(0, KtestifyLintMain.entrypoint(new String[] {LINT_DIR + "/clean.feature", "--format", "codeclimate"}));
+        assertEquals(
+                0, KtestifyLintMain.entrypoint(new String[] {LINT_DIR + "/clean.feature", "--format", "codeclimate"}));
     }
 
     @Test
@@ -131,5 +132,18 @@ class KtestifyLintMainTest {
         assertEquals(0, KtestifyLintMain.entrypoint(new String[] {
             LINT_DIR + "/clean.feature", "--assets-dir", LINT_DIR + "/assets"
         }));
+    }
+
+    @Test
+    void ignoreTagsSkipsTaggedFeature() {
+        String dir = "src/test/resources/lint-tags/wip-feature.feature";
+        assertEquals(1, KtestifyLintMain.entrypoint(new String[] {dir}));
+        assertEquals(0, KtestifyLintMain.entrypoint(new String[] {dir, "--ignore-tags", "@WIP"}));
+        assertEquals(0, KtestifyLintMain.entrypoint(new String[] {dir, "--ignore-tagged", "WIP"}));
+    }
+
+    @Test
+    void ignoreTagsWithoutValueIsUsageError() {
+        assertEquals(2, KtestifyLintMain.entrypoint(new String[] {LINT_DIR, "--ignore-tags"}));
     }
 }

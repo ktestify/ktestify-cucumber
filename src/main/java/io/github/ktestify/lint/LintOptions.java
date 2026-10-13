@@ -17,6 +17,7 @@ package io.github.ktestify.lint;
 
 import java.nio.file.Path;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Options that drive the {@link FeatureLinter}.
@@ -26,17 +27,54 @@ import java.util.Set;
  * @param assetsSubdir name of the assets folder beside each feature file; used when no explicit assets directory is set
  * @param assetsDir absolute assets directory override; applies to every feature file
  * @param disabled rule ids that are suppressed from every report
+ * @param ignoredTags tags (with or without the leading {@code @}); a feature carrying one is skipped entirely, a
+ *     scenario carrying one is excluded from the report
  * @since 1.2.2
  */
 public record LintOptions(
-        boolean semantic, boolean checkFiles, String assetsSubdir, Path assetsDir, Set<String> disabled) {
+        boolean semantic,
+        boolean checkFiles,
+        String assetsSubdir,
+        Path assetsDir,
+        Set<String> disabled,
+        Set<String> ignoredTags) {
+
+    /**
+     * Creates options and normalizes the ignored tags to their {@code @}-prefixed form.
+     *
+     * @since 1.2.2
+     */
+    public LintOptions {
+        ignoredTags = ignoredTags == null
+                ? Set.of()
+                : ignoredTags.stream()
+                        .map(String::trim)
+                        .filter(t -> !t.isEmpty() && !t.equals("@"))
+                        .map(t -> t.startsWith("@") ? t : "@" + t)
+                        .collect(Collectors.toUnmodifiableSet());
+    }
+
+    /**
+     * Creates options with no ignored tags.
+     *
+     * @param semantic whether the domain rules run
+     * @param checkFiles whether asset file-existence checks run
+     * @param assetsSubdir assets folder name beside each feature file
+     * @param assetsDir absolute assets directory override
+     * @param disabled rule ids that are suppressed
+     * @since 1.2.2
+     */
+    public LintOptions(
+            boolean semantic, boolean checkFiles, String assetsSubdir, Path assetsDir, Set<String> disabled) {
+        this(semantic, checkFiles, assetsSubdir, assetsDir, disabled, Set.of());
+    }
 
     /** Default name of the assets folder that sits next to each feature file. */
     public static final String DEFAULT_ASSETS_SUBDIR = "assets";
 
     /** Default options: semantic checks on, file checks on, default assets subdir, nothing disabled. */
     public static LintOptions defaults() {
-        return new LintOptions(true, true, DEFAULT_ASSETS_SUBDIR, null, Set.of());
+        return new LintOptions(true, true, DEFAULT_ASSETS_SUBDIR, null, Set.of(), Set.of());
     }
 
     /**
@@ -48,6 +86,17 @@ public record LintOptions(
      */
     public boolean isDisabled(LintRule rule) {
         return disabled().contains(rule.id());
+    }
+
+    /**
+     * Returns whether any of the given tag names is ignored.
+     *
+     * @param tagNames tag names as written in the feature file, including the leading {@code @}
+     * @return {@code true} if at least one tag is in the ignored set
+     * @since 1.2.2
+     */
+    public boolean isIgnored(java.util.Collection<String> tagNames) {
+        return tagNames.stream().anyMatch(ignoredTags()::contains);
     }
 
     /**

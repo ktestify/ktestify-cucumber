@@ -15,16 +15,15 @@
  */
 package io.github.ktestify.lint;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class FeatureLinterTest {
 
@@ -100,6 +99,30 @@ class FeatureLinterTest {
     void explicitAssetsDirOverridesSubdir() throws IOException {
         LintOptions options = new LintOptions(true, true, "does-not-exist", LINT_DIR.resolve("assets"), Set.of());
         assertFalse(lintRules(LINT_DIR.resolve("clean.feature"), options).contains(LintRule.D004));
+    }
+
+    private static LintOptions ignoring(String... tags) {
+        return new LintOptions(true, true, "assets", null, Set.of(), Set.of(tags));
+    }
+
+    @Test
+    void taggedFeatureIsSkippedEntirely() throws IOException {
+        Path feature = Path.of("src", "test", "resources", "lint-tags", "wip-feature.feature");
+        assertFalse(lintRules(feature, LintOptions.defaults()).isEmpty());
+        assertTrue(lintRules(feature, ignoring("WIP")).isEmpty());
+    }
+
+    @Test
+    void taggedScenarioIsExcludedFromReport() throws IOException {
+        Path feature = Path.of("src", "test", "resources", "lint-tags", "wip-scenario.feature");
+        assertTrue(lintRules(feature, LintOptions.defaults()).contains(LintRule.D002));
+        assertFalse(lintRules(feature, ignoring("@WIP")).contains(LintRule.D002));
+    }
+
+    @Test
+    void unrelatedIgnoredTagChangesNothing() throws IOException {
+        Path feature = Path.of("src", "test", "resources", "lint-tags", "wip-scenario.feature");
+        assertTrue(lintRules(feature, ignoring("@Other")).contains(LintRule.D002));
     }
 
     @Test
