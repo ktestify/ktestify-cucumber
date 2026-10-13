@@ -16,14 +16,13 @@
 package io.github.ktestify.lint;
 
 import io.github.ktestify.lint.LintReportFormatter.Format;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * CLI entry point for feature-file linting.
@@ -39,6 +38,7 @@ import java.util.stream.Collectors;
  * java -cp ktestify-cucumber.jar io.github.ktestify.lint.KtestifyLintMain features/ --assets-subdir data
  * java -cp ktestify-cucumber.jar io.github.ktestify.lint.KtestifyLintMain features/ --assets-dir /abs/path
  * java -cp ktestify-cucumber.jar io.github.ktestify.lint.KtestifyLintMain features/ --disable G013,G001
+ * java -cp ktestify-cucumber.jar io.github.ktestify.lint.KtestifyLintMain features/ --ignore-tags @WIP,@Skip
  * </pre>
  *
  * <p>Exit code is {@code 0} when there are no ERROR-severity violations, {@code 1} otherwise (also when warnings exceed
@@ -59,7 +59,7 @@ public final class KtestifyLintMain {
      * @return the exit code
      * @since 1.2.2
      */
-    public static int main0(String[] args) {
+    public static int entrypoint(String[] args) {
         if (args == null || args.length == 0) {
             usage();
             return 2;
@@ -72,6 +72,7 @@ public final class KtestifyLintMain {
         String assetsSubdir = LintOptions.DEFAULT_ASSETS_SUBDIR;
         Path assetsDir = null;
         Set<String> disabled = Set.of();
+        Set<String> ignoredTags = Set.of();
         long maxWarnings = -1;
 
         for (int i = 0; i < args.length; i++) {
@@ -110,6 +111,15 @@ public final class KtestifyLintMain {
                             .filter(s -> !s.isBlank())
                             .collect(Collectors.toUnmodifiableSet());
                 }
+                case "--ignore-tags", "--ignore-tagged" -> {
+                    if (++i >= args.length) {
+                        return usageError(arg + " requires a comma-separated list of tags, e.g. @WIP,@Skip.");
+                    }
+                    ignoredTags = java.util.Arrays.stream(args[i].split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isBlank())
+                            .collect(Collectors.toUnmodifiableSet());
+                }
                 case "--max-warnings" -> {
                     if (++i >= args.length) {
                         return usageError("--max-warnings requires a value.");
@@ -143,7 +153,7 @@ public final class KtestifyLintMain {
             return 2;
         }
 
-        LintOptions options = new LintOptions(semantic, checkFiles, assetsSubdir, assetsDir, disabled);
+        LintOptions options = new LintOptions(semantic, checkFiles, assetsSubdir, assetsDir, disabled, ignoredTags);
         FeatureLinter linter = new FeatureLinter(options);
 
         Map<Path, List<LintViolation>> results = new LinkedHashMap<>();
@@ -193,8 +203,8 @@ public final class KtestifyLintMain {
      * @param args raw CLI arguments
      * @since 1.2.2
      */
-    public static void main(String[] args) {
-        System.exit(main0(args));
+    static void main(String[] args) {
+        System.exit(entrypoint(args));
     }
 
     private static void usage() {
@@ -210,6 +220,8 @@ public final class KtestifyLintMain {
                   --assets-subdir <name>    assets folder beside each feature file (default: assets)
                   --assets-dir <path>       absolute assets folder, overrides --assets-subdir
                   --disable <ids>           comma-separated rule ids to disable, e.g. G013,G001
+                  --ignore-tags <tags>      comma-separated tags to skip, e.g. @WIP,@Skip; a tagged feature is
+                                            skipped entirely, a tagged scenario is excluded (alias: --ignore-tagged)
                   --max-warnings <n>        fail (exit 1) if warnings exceed this count; -1 = never
                   --help                    show this help
                 """);

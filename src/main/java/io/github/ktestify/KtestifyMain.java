@@ -25,7 +25,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Docker / CLI entry point for ktestify-cucumber.
@@ -122,7 +124,7 @@ public class KtestifyMain {
         if (args != null && args.length > 0 && "lint".equals(args[0])) {
             String[] lintArgs = new String[args.length - 1];
             System.arraycopy(args, 1, lintArgs, 0, lintArgs.length);
-            return io.github.ktestify.lint.KtestifyLintMain.main0(lintArgs);
+            return io.github.ktestify.lint.KtestifyLintMain.entrypoint(lintArgs);
         }
         PluginRegistry pluginRegistry = null;
         try {
@@ -268,7 +270,7 @@ public class KtestifyMain {
             LOG.debug("strict-matching: {}", cfg.getFramework().isStrictMatching());
             LOG.debug("max-retries: {}", cfg.getFramework().getMaxRetries());
             LOG.debug("reporting.enabled: {}", cfg.getFramework().isEnableReporting());
-            LOG.debug("reporting.format: '{}'", cfg.getFramework().getReportFormat());
+            LOG.debug("reporting.format: {}", cfg.getFramework().getReportFormats());
             LOG.debug("reporting.output: '{}'", cfg.getFramework().getReportOutputDirectory());
             var kafka = cfg.getKafka();
             LOG.debug("kafka.topic-namespace: '{}'", kafka.getTopicNamespace().orElse("<not set>"));
@@ -357,12 +359,16 @@ public class KtestifyMain {
      *
      * <ul>
      *   <li>{@code html} — adds the cucumber-reportr HTML plugin ({@code io.github.nil_malh.cucumber.reportr.Core})
-     *   <li>{@code json} — adds the built-in JSON file reporter ({@code json:target/cucumber-reports/cucumber.json})
+     *   <li>{@code json} — adds the built-in JSON file reporter ({@code json:<output>/cucumber.json})
      *   <li>{@code pretty} — adds the built-in pretty console reporter
      * </ul>
      *
-     * <p>If reporting is disabled ({@code ktestify.framework.reporting.enabled = false}) no plugin is added. Falls back
-     * to {@code pretty} for unknown format values.
+     * <p>{@code ktestify.framework.reporting.format} accepts a single format or an array of formats, e.g.
+     * {@code ["html", "json"]}. One {@code --plugin} argument is added per format, so several reports can be generated
+     * in one run.
+     *
+     * <p>If reporting is disabled ({@code ktestify.framework.reporting.enabled = false}) no plugin is added. Unknown
+     * formats are skipped with a warning, and {@code pretty} is used when no configured format is valid.
      */
     private static void addReportingPlugins(List<String> args) {
         KtestifyConfig cfg;
@@ -382,29 +388,43 @@ public class KtestifyMain {
             return;
         }
 
-        String format = cfg.getFramework().getReportFormat();
-        LOG.info("Reporting format: '{}'", format);
+        List<String> formats = cfg.getFramework().getReportFormats();
+        LOG.info("Reporting formats: {}", formats);
 
         String outputDir = cfg.getFramework().getReportOutputDirectory();
 
-        switch (format == null ? "" : format.toLowerCase()) {
-            case "html" -> {
-                args.add("--plugin");
-                args.add("io.github.nil_malh.cucumber.reportr.Core:" + outputDir);
+        boolean addedAny = false;
+        Set<String> seen = new LinkedHashSet<>();
+        for (String format : formats) {
+            String normalized = format == null ? "" : format.trim().toLowerCase();
+            if (!seen.add(normalized)) {
+                LOG.warn("Duplicate report format '{}' — adding it only once.", format);
+                continue;
             }
-            case "json" -> {
-                args.add("--plugin");
-                args.add("json:" + outputDir + "/cucumber.json");
+            switch (normalized) {
+                case "html" -> {
+                    args.add("--plugin");
+                    args.add("io.github.nil_malh.cucumber.reportr.Core:" + outputDir);
+                    addedAny = true;
+                }
+                case "json" -> {
+                    args.add("--plugin");
+                    args.add("json:" + outputDir + "/cucumber.json");
+                    addedAny = true;
+                }
+                case "pretty" -> {
+                    args.add("--plugin");
+                    args.add("pretty");
+                    addedAny = true;
+                }
+                default -> LOG.warn("Unknown report format '{}' — skipping.", format);
             }
-            case "pretty" -> {
-                args.add("--plugin");
-                args.add("pretty");
-            }
-            default -> {
-                LOG.warn("Unknown report format '{}' — falling back to 'pretty'.", format);
-                args.add("--plugin");
-                args.add("pretty");
-            }
+        }
+
+        if (!addedAny) {
+            LOG.warn("No valid report format in {} — falling back to 'pretty'.", formats);
+            args.add("--plugin");
+            args.add("pretty");
         }
     }
 

@@ -16,7 +16,6 @@
 package io.github.ktestify.lint;
 
 import io.cucumber.messages.types.*;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
