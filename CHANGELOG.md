@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### ✨ Features
+
+- Support multiple report formats in config (#57) — [@nil-malh](https://github.com/nil-malh) ([#57](https://github.com/ktestify/ktestify-cucumber/pull/57))
+
+- Add support for ignoring tagged features and scenarios — [@nil-malh](https://github.com/nil-malh) ([#57](https://github.com/ktestify/ktestify-cucumber/pull/57))
+
+
+### ⬆️ Dependency Updates
+
+- Update version of `ktestify-core` from 1.2.2 to 1.2.3 — [@nil-malh](https://github.com/nil-malh) ([#57](https://github.com/ktestify/ktestify-cucumber/pull/57))
+
+- Updated notifications plugin version to 0.1.4 — [@nil-malh](https://github.com/nil-malh) ([#57](https://github.com/ktestify/ktestify-cucumber/pull/57))
+
+
 ## [1.2.2] — 2026-10-12
 
 ### ♻️ Refactoring
