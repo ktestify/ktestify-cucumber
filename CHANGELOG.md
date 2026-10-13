@@ -2,7 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.2.3] — 2026-10-13
+
 ### ✨ Features
 
 - Support multiple report formats in config (#57) — [@nil-malh](https://github.com/nil-malh) ([#57](https://github.com/ktestify/ktestify-cucumber/pull/57))
