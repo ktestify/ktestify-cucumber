@@ -31,16 +31,15 @@ import java.util.stream.Stream;
  * <p>Combines three passes:
  *
  * <ol>
- *   <li>{@link GherkinDocumentParser}: Cucumber's own parser; every parse error becomes a violation, so a file
- *       Cucumber cannot run always fails the lint run
+ *   <li>{@link GherkinDocumentParser}: Cucumber's own parser; every parse error becomes a violation, so a file Cucumber
+ *       cannot run always fails the lint run
  *   <li>{@link StructureLintChecks}: raw-line formatting rules ({@code G001} to {@code G013})
- *   <li>{@link DomainLintChecks}: ktestify-specific semantic rules ({@code D001} to {@code D004}) over the parsed
- *       AST
+ *   <li>{@link DomainLintChecks}: ktestify-specific semantic rules ({@code D001} to {@code D004}) over the parsed AST
  * </ol>
  *
- * <p>Structural AST rules ({@code G004} to {@code G017}) are covered by the parser itself: a file that parses cleanly has
- * exactly one named Feature, named scenarios, well-formed tables with consistent column counts, and no steps outside a
- * Background or Scenario.
+ * <p>Structural AST rules ({@code G004} to {@code G017}) are covered by the parser itself: a file that parses cleanly
+ * has exactly one named Feature, named scenarios, well-formed tables with consistent column counts, and no steps
+ * outside a Background or Scenario.
  *
  * @since 1.2.2
  */

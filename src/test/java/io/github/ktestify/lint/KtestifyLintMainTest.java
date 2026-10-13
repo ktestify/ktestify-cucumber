@@ -25,110 +25,110 @@ class KtestifyLintMainTest {
 
     @Test
     void noArgsIsUsageError() {
-        assertEquals(2, KtestifyLintMain.main0(new String[] {}));
+        assertEquals(2, KtestifyLintMain.entrypoint(new String[] {}));
     }
 
     @Test
     void unknownOptionIsUsageError() {
-        assertEquals(2, KtestifyLintMain.main0(new String[] {LINT_DIR, "--bogus"}));
+        assertEquals(2, KtestifyLintMain.entrypoint(new String[] {LINT_DIR, "--bogus"}));
     }
 
     @Test
     void missingPathIsUsageError() {
-        assertEquals(2, KtestifyLintMain.main0(new String[] {"--format", "json"}));
+        assertEquals(2, KtestifyLintMain.entrypoint(new String[] {"--format", "json"}));
     }
 
     @Test
     void cleanFeatureExitsZero() {
-        assertEquals(0, KtestifyLintMain.main0(new String[] {LINT_DIR + "/clean.feature"}));
+        assertEquals(0, KtestifyLintMain.entrypoint(new String[] {LINT_DIR + "/clean.feature"}));
     }
 
     @Test
     void domainFeatureExitsOne() {
-        assertEquals(1, KtestifyLintMain.main0(new String[] {LINT_DIR + "/domain.feature"}));
+        assertEquals(1, KtestifyLintMain.entrypoint(new String[] {LINT_DIR + "/domain.feature"}));
     }
 
     @Test
     void noSemanticExitsZeroOnDomainFeature() {
-        assertEquals(0, KtestifyLintMain.main0(new String[] {LINT_DIR + "/domain.feature", "--no-semantic"}));
+        assertEquals(0, KtestifyLintMain.entrypoint(new String[] {LINT_DIR + "/domain.feature", "--no-semantic"}));
     }
 
     @Test
     void helpExitsZero() {
-        assertEquals(0, KtestifyLintMain.main0(new String[] {"--help"}));
+        assertEquals(0, KtestifyLintMain.entrypoint(new String[] {"--help"}));
     }
 
     @Test
     void jsonFormatRuns() {
-        assertEquals(0, KtestifyLintMain.main0(new String[] {LINT_DIR + "/clean.feature", "--format", "json"}));
+        assertEquals(0, KtestifyLintMain.entrypoint(new String[] {LINT_DIR + "/clean.feature", "--format", "json"}));
     }
 
     @Test
     void codeclimateFormatRuns() {
-        assertEquals(0, KtestifyLintMain.main0(new String[] {LINT_DIR + "/clean.feature", "--format", "codeclimate"}));
+        assertEquals(0, KtestifyLintMain.entrypoint(new String[] {LINT_DIR + "/clean.feature", "--format", "codeclimate"}));
     }
 
     @Test
     void unknownFormatIsUsageError() {
-        assertEquals(2, KtestifyLintMain.main0(new String[] {LINT_DIR + "/clean.feature", "--format", "bogus"}));
+        assertEquals(2, KtestifyLintMain.entrypoint(new String[] {LINT_DIR + "/clean.feature", "--format", "bogus"}));
     }
 
     @Test
     void missingFormatValueIsUsageError() {
-        assertEquals(2, KtestifyLintMain.main0(new String[] {LINT_DIR, "--format"}));
+        assertEquals(2, KtestifyLintMain.entrypoint(new String[] {LINT_DIR, "--format"}));
     }
 
     @Test
     void missingAssetsSubdirValueIsUsageError() {
-        assertEquals(2, KtestifyLintMain.main0(new String[] {LINT_DIR, "--assets-subdir"}));
+        assertEquals(2, KtestifyLintMain.entrypoint(new String[] {LINT_DIR, "--assets-subdir"}));
     }
 
     @Test
     void missingAssetsDirValueIsUsageError() {
-        assertEquals(2, KtestifyLintMain.main0(new String[] {LINT_DIR, "--assets-dir"}));
+        assertEquals(2, KtestifyLintMain.entrypoint(new String[] {LINT_DIR, "--assets-dir"}));
     }
 
     @Test
     void missingDisableValueIsUsageError() {
-        assertEquals(2, KtestifyLintMain.main0(new String[] {LINT_DIR, "--disable"}));
+        assertEquals(2, KtestifyLintMain.entrypoint(new String[] {LINT_DIR, "--disable"}));
     }
 
     @Test
     void missingMaxWarningsValueIsUsageError() {
-        assertEquals(2, KtestifyLintMain.main0(new String[] {LINT_DIR, "--max-warnings"}));
+        assertEquals(2, KtestifyLintMain.entrypoint(new String[] {LINT_DIR, "--max-warnings"}));
     }
 
     @Test
     void nonNumericMaxWarningsIsUsageError() {
-        assertEquals(2, KtestifyLintMain.main0(new String[] {LINT_DIR, "--max-warnings", "abc"}));
+        assertEquals(2, KtestifyLintMain.entrypoint(new String[] {LINT_DIR, "--max-warnings", "abc"}));
     }
 
     @Test
     void nonexistentPathIsUsageError() {
-        assertEquals(2, KtestifyLintMain.main0(new String[] {"does/not/exist.feature"}));
+        assertEquals(2, KtestifyLintMain.entrypoint(new String[] {"does/not/exist.feature"}));
     }
 
     @Test
     void directoryIsRecursed() {
-        assertEquals(1, KtestifyLintMain.main0(new String[] {LINT_DIR}));
+        assertEquals(1, KtestifyLintMain.entrypoint(new String[] {LINT_DIR}));
     }
 
     @Test
     void maxWarningsCanFailRun() {
         // clean.feature produces no warnings; a threshold of -1 never fails, 0 also passes with 0 warnings
-        assertEquals(0, KtestifyLintMain.main0(new String[] {LINT_DIR + "/clean.feature", "--max-warnings", "0"}));
+        assertEquals(0, KtestifyLintMain.entrypoint(new String[] {LINT_DIR + "/clean.feature", "--max-warnings", "0"}));
     }
 
     @Test
     void noFileCheckSkipsExistence() {
-        assertEquals(0, KtestifyLintMain.main0(new String[] {
+        assertEquals(0, KtestifyLintMain.entrypoint(new String[] {
             LINT_DIR + "/domain.feature", "--no-file-check", "--disable", "D001,D002"
         }));
     }
 
     @Test
     void assetsDirOverrideIsAccepted() {
-        assertEquals(0, KtestifyLintMain.main0(new String[] {
+        assertEquals(0, KtestifyLintMain.entrypoint(new String[] {
             LINT_DIR + "/clean.feature", "--assets-dir", LINT_DIR + "/assets"
         }));
     }

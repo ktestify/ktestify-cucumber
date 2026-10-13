@@ -208,6 +208,59 @@ class KtestifyMainTest {
         verify(registry).shutdown();
     }
 
+    @Test
+    void multipleReportFormatsAddOnePluginEach() {
+        KtestifyConfig.reset();
+        KtestifyConfig.load(ConfigFactory.parseString("""
+                ktestify.framework.reporting.enabled = true
+                ktestify.framework.reporting.format = ["html", "json"]
+                ktestify.framework.reporting.output = "target/test-reports"
+                """));
+
+        assertEquals(0, KtestifyMain.run(new String[] {"features"}));
+
+        cucumber.verify(() -> Main.run(
+                argThat(args -> {
+                    List<String> list = Arrays.asList(args);
+                    return list.contains("io.github.nil_malh.cucumber.reportr.Core:target/test-reports")
+                            && list.contains("json:target/test-reports/cucumber.json");
+                }),
+                any(ClassLoader.class)));
+        verify(registry).shutdown();
+    }
+
+    @Test
+    void singleStringReportFormatStillAddsItsPlugin() {
+        KtestifyConfig.reset();
+        KtestifyConfig.load(ConfigFactory.parseString("""
+                ktestify.framework.reporting.enabled = true
+                ktestify.framework.reporting.format = "json"
+                ktestify.framework.reporting.output = "target/test-reports"
+                """));
+
+        assertEquals(0, KtestifyMain.run(new String[] {"features"}));
+
+        cucumber.verify(() -> Main.run(
+                argThat(args -> Arrays.asList(args).contains("json:target/test-reports/cucumber.json")),
+                any(ClassLoader.class)));
+        verify(registry).shutdown();
+    }
+
+    @Test
+    void unknownReportFormatsFallBackToPretty() {
+        KtestifyConfig.reset();
+        KtestifyConfig.load(ConfigFactory.parseString("""
+                ktestify.framework.reporting.enabled = true
+                ktestify.framework.reporting.format = ["bogus"]
+                """));
+
+        assertEquals(0, KtestifyMain.run(new String[] {"features"}));
+
+        cucumber.verify(
+                () -> Main.run(argThat(args -> Arrays.asList(args).contains("pretty")), any(ClassLoader.class)));
+        verify(registry).shutdown();
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"INFO", "DEBUG"})
     void logsPlainConfigurationWithAllowlistedDebugDetails(String level) {

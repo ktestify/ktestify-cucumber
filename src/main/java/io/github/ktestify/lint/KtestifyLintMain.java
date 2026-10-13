@@ -59,7 +59,7 @@ public final class KtestifyLintMain {
      * @return the exit code
      * @since 1.2.2
      */
-    public static int main0(String[] args) {
+    public static int entrypoint(String[] args) {
         if (args == null || args.length == 0) {
             usage();
             return 2;
@@ -193,8 +193,8 @@ public final class KtestifyLintMain {
      * @param args raw CLI arguments
      * @since 1.2.2
      */
-    public static void main(String[] args) {
-        System.exit(main0(args));
+    static void main(String[] args) {
+        System.exit(entrypoint(args));
     }
 
     private static void usage() {
