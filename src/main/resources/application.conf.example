@@ -74,7 +74,8 @@ ktestify {
     # Reporting settings
     reporting {
       enabled = true
-      format = "html"
+      # One or more report formats: html, json, pretty
+      format = ["html", "json"]
     }
   }
 }
