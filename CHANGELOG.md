@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### ⬆️ Dependency Updates
+
+- Update ktestify-core version from 1.2.3 to 1.2.4 — [@nil-malh](https://github.com/nil-malh)
+
+
 ## [1.2.3] — 2026-10-13
 
 ### ✨ Features
