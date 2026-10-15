@@ -15,6 +15,8 @@
  */
 package io.github.ktestify.services;
 
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
+
 import com.google.gson.Gson;
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.io.kafka.KafkaClientFactory;
@@ -24,17 +26,14 @@ import io.github.ktestify.io.kafka.impl.RawKafkaProducer;
 import io.github.ktestify.models.Topic;
 import io.github.ktestify.utils.DataTableUtils;
 import io.github.ktestify.utils.FileUtils;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.kafka.clients.producer.Producer;
-
 import java.io.File;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
-
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.kafka.clients.producer.Producer;
 
 /**
  * Orchestrates Kafka producer operations for Cucumber step definitions.

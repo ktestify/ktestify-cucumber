@@ -21,13 +21,12 @@ import io.github.ktestify.config.KtestifyConfig;
 import io.github.ktestify.exceptions.PluginException;
 import io.github.ktestify.plugin.PluginContext;
 import io.github.ktestify.plugin.PluginRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Docker / CLI entry point for ktestify-cucumber.

@@ -15,16 +15,9 @@
  */
 package io.github.ktestify.services;
 
-import io.github.ktestify.models.Topic;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.kafka.clients.producer.MockProducer;
-import org.apache.kafka.common.serialization.Serializer;
-import org.apache.kafka.common.serialization.StringSerializer;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import static org.junit.jupiter.api.Assertions.*;
 
+import io.github.ktestify.models.Topic;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -33,8 +26,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.kafka.clients.producer.MockProducer;
+import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /** Verifies that {@link ProducerValidationService} reuses and closes its Kafka producers. No broker is required. */
 @DisplayName("ProducerValidationService: producer lifecycle")
