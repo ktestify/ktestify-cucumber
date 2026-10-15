@@ -3,9 +3,18 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+### ✨ Features
+
+- Add lazy batch matching strategy for Avro and batch records (#59) — [@nil-malh](https://github.com/nil-malh) ([#59](https://github.com/ktestify/ktestify-cucumber/pull/59))
+
+- Add lazy batch matching strategy for Avro and batch records — [@nil-malh](https://github.com/nil-malh) ([#59](https://github.com/ktestify/ktestify-cucumber/pull/59))
+
+
 ### 🔧 Miscellaneous
 
 - Remove outdated issue and feature request templates they are org-managed now — [@nil-malh](https://github.com/nil-malh)
+
+- Updated ktestify-core version from 1.2.4 to 1.2.5 — [@nil-malh](https://github.com/nil-malh) ([#59](https://github.com/ktestify/ktestify-cucumber/pull/59))
 
 
 ## [1.2.5] — 2026-10-15
