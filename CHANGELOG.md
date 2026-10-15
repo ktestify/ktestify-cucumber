@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### ✨ Features
+
+- Add expected key and key match strategy to Avro validation methods — [@nil-malh](https://github.com/nil-malh) ([#58](https://github.com/ktestify/ktestify-cucumber/pull/58))
+
+
+### 🐛 Bug Fixes
+
+- Missing expected key in consumerContext (#58) — [@nil-malh](https://github.com/nil-malh) ([#58](https://github.com/ktestify/ktestify-cucumber/pull/58))
+
+
 ## [1.2.4] — 2026-10-14
 
 ### ⬆️ Dependency Updates
