@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### 🔧 Miscellaneous
+
+- Remove outdated issue and feature request templates they are org-managed now — [@nil-malh](https://github.com/nil-malh)
+
+
 ## [1.2.5] — 2026-10-15
 
 ### ✨ Features
