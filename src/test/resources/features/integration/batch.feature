@@ -54,6 +54,24 @@ Feature: Batch consumer validation
       | topicAlias | expectedRecordsCount | files                                                                                                 | consumerReadTimeout | consumerDeltaTime |
       | batch-out  | 3                    | integration/batch-expected-1.json,integration/batch-expected-2.json,integration/batch-expected-3.json | 30                  | 60                |
 
+  @batchLazy
+  Scenario: Batch of 3 records sent out of order matched with lazy batchMatchStrategy
+    When record from file is sent
+      | topicAlias | file                             | recordKey |
+      | batch-in   | integration/batch-payload-3.json | batch-006 |
+
+    And record from file is sent
+      | topicAlias | file                             | recordKey |
+      | batch-in   | integration/batch-payload-1.json | batch-007 |
+
+    And record from file is sent
+      | topicAlias | file                             | recordKey |
+      | batch-in   | integration/batch-payload-2.json | batch-008 |
+
+    Then expected records from files
+      | topicAlias | expectedRecordsCount | files                                                                                                 | batchMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+      | batch-out  | 3                    | integration/batch-expected-1.json,integration/batch-expected-2.json,integration/batch-expected-3.json | lazy               | 30                  | 60                |
+
   # ── partial batch → negative assertion ────────────────────────────────────
 
   @batchTimeout
@@ -63,4 +81,3 @@ Feature: Batch consumer validation
     And record should not appear in topic
       | topicAlias | topicType | expectedRecordKey      | consumerReadTimeout | consumerDeltaTime |
       | batch-out  | raw       | batch-never-produced   | 5                   | 5                 |
-

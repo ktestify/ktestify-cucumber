@@ -160,6 +160,16 @@ public final class DataTableUtils {
          */
         public static final String DATA_TABLE_KEY_MATCH_STRATEGY = "keyMatchStrategy";
 
+        /**
+         * DataTable column for the batch match strategy. Optional on batch steps ({@code expected records from files}
+         * and {@code expected records from files based on schema}). Accepts {@code positional} (aliases:
+         * {@code ordered}, {@code index}, {@code strict}) or {@code lazy} (aliases: {@code fuzzy}, {@code unordered},
+         * {@code any_order}). Defaults to {@code positional} when absent.
+         *
+         * @since 1.2.3
+         */
+        public static final String DATA_TABLE_BATCH_MATCH_STRATEGY = "batchMatchStrategy";
+
         public static final String DATA_TABLE_EXPECTED_RECORDS_COUNT = "expectedRecordsCount";
         public static final String EXPECTED_RECORDS_COUNT = "expectedRecordsCount";
 
