@@ -2,7 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.2.6] — 2026-10-15
+
 ### ✨ Features
 
 - Add lazy batch matching strategy for Avro and batch records (#59) — [@nil-malh](https://github.com/nil-malh) ([#59](https://github.com/ktestify/ktestify-cucumber/pull/59))
