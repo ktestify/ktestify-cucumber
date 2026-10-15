@@ -146,6 +146,29 @@ The value is case-insensitive and tolerant of hyphens/underscores (`starts-with`
 
 ---
 
+## Batch matching strategies
+
+When using batch validation steps (`Then expected records from files` or `Then expected records from files based on schema`), you can optionally include a `batchMatchStrategy` column to control how consumed records are paired with expected files.
+
+| Strategy | Accepted values | Behaviour |
+|---|---|---|
+| `POSITIONAL` | `positional`, `ordered`, `index`, `strict` | Record at index `i` must match file at index `i` (default) |
+| `LAZY` | `lazy`, `fuzzy`, `unordered`, `any_order`, `any-order` | Order-independent 1-to-1 matching without replacement |
+
+```gherkin
+# Positional (default): record 1 -> file 1, record 2 -> file 2, record 3 -> file 3
+Then expected records from files
+  | topicAlias | expectedRecordsCount | files                                                                                                 | consumerReadTimeout | consumerDeltaTime |
+  | batch-out  | 3                    | integration/batch-expected-1.json,integration/batch-expected-2.json,integration/batch-expected-3.json | 30                  | 60                |
+
+# Lazy / Fuzzy: records sent in order (3, 1, 2) still match files listed as (1, 2, 3)
+Then expected records from files
+  | topicAlias | expectedRecordsCount | files                                                                                                 | batchMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+  | batch-out  | 3                    | integration/batch-expected-1.json,integration/batch-expected-2.json,integration/batch-expected-3.json | lazy               | 30                  | 60                |
+```
+
+---
+
 ## Configuration
 
 ktestify-cucumber uses [Typesafe Config](https://github.com/lightbend/config) (HOCON). Override defaults via `-Dconfig.file`, environment variables, or an `application.conf` on the classpath.

@@ -1,65 +1,93 @@
-## 📝 Description
+<!--
+  Thanks for contributing to KTestify! 🙌
 
-<!-- Clearly describe WHAT this PR does and WHY.
-     Link the issue(s) it resolves below. -->
+  PR title: please follow Conventional Commits, e.g.
+    feat(core): add JSONPath record matcher
+    fix(cucumber): honour consumerReadTimeout in batch steps
+    docs: document Azure Blob auth modes
+  Add `!` for breaking changes:  feat(core)!: rename RecordMatcher#matches
 
-Resolves #<!-- issue number -->
+  Keep the PR focused: one logical change per PR is much easier to review.
+-->
 
----
+## 📝 Summary
 
-## 🔄 Type of Change
+<!-- WHAT does this PR change, and WHY? 2-4 sentences is usually enough.
+     Focus on the motivation, since the diff already shows the how. -->
 
-<!-- Delete options that are not relevant. -->
+Closes #<!-- issue number (use "Refs #" if it only partially addresses it) -->
 
-- [ ] 🐛 **Bug fix** — non-breaking change that fixes an issue
-- [ ] ✨ **New feature** — non-breaking change that adds functionality
-- [ ] 💥 **Breaking change** — fix or feature that changes existing behaviour
-- [ ] ♻️ **Refactoring / technical debt** — no functional change
-- [ ] 📖 **Documentation** — doc-only changes
-- [ ] ⬆️ **Dependency update** — bumped library/plugin version(s)
-- [ ] 🔧 **CI / build** — changes to workflows, pom.xml, tooling
+## 🔄 Type of change
 
----
+<!-- Tick one or more. -->
 
-## ✅ Pre-Merge Checklist
+- [ ] 🐛 **Bug fix** (`fix`): non-breaking change that fixes an issue
+- [ ] ✨ **Feature** (`feat`): non-breaking change that adds functionality
+- [ ] 💥 **Breaking change** (`!`): changes existing behaviour, public API, Gherkin steps or config keys
+- [ ] ♻️ **Refactor** (`refactor`): no functional change
+- [ ] ⚡ **Performance** (`perf`)
+- [ ] 📖 **Documentation** (`docs`)
+- [ ] ⬆️ **Dependencies** (`build(deps)`)
+- [ ] 🔧 **CI / build** (`ci` / `build`): workflows, `pom.xml`, tooling
 
-### Code Quality
-- [ ] My code follows the **Palantir Java Format** style (passes `mvn spotless:check`)
-- [ ] I have added or updated **Javadoc** on public types and methods
+## 💥 Breaking changes & migration
 
-### Tests
-- [ ] I have added **unit tests** that cover the new / changed behaviour
-- [ ] All existing and new tests pass locally (`mvn verify`)
-- [ ] **JaCoCo line coverage ≥ 70 %** is maintained
-- [ ] Tests using Testcontainers are isolated and do not leave containers running
+<!-- Only if you ticked "Breaking change", otherwise delete this section.
+     Describe what breaks (public API, SPI contract such as RecordMatcher /
+     RecordFetcher, Gherkin step wording, HOCON keys, env vars) and how users
+     or plugin authors should migrate. A before/after snippet helps a lot. -->
 
+## ✅ Checklist
 
-### Licensing
-- [ ] **Apache 2.0 license header** has been added to every new source file (using spotless)
+<!-- Tick what applies. Strike through (~~like this~~) items that don't apply,
+     rather than deleting them, so reviewers know they were considered.
+     Docs-only PRs (ktestify-doc) can skip "Code" and "Tests". -->
 
----
+**Code**
+- [ ] Formatting passes `mvn spotless:check` (run `mvn spotless:apply` to fix it and add the Apache 2.0 headers)
+- [ ] Public types and methods have up-to-date **Javadoc**
+- [ ] No secrets, tokens or real webhook URLs in code, tests or sample config
 
-## 🧪 How to Test Locally
+**Tests**
+- [ ] New / changed behaviour is covered by tests
+- [ ] `mvn verify` passes locally, and **JaCoCo line coverage stays ≥ 70 %**
+- [ ] Testcontainers-based tests are isolated and clean up after themselves
+
+**Compatibility & docs**
+- [ ] New or changed HOCON keys have a default in `reference.conf` and a documented env-var override
+- [ ] New or changed **Gherkin steps** are documented, with an example scenario
+- [ ] New SPI implementations are registered in `META-INF/services/`
+- [ ] User-facing changes are documented (docs PR: <!-- ktestify/ktestify-doc#… or "not needed" -->)
+
+## 🧪 How to test
+
+<!-- Steps a reviewer can follow to verify the change. The defaults below
+     need Docker running for Testcontainers. -->
 
 ```bash
-# 1. Build and run all tests (requires Docker for Testcontainers)
+mvn spotless:check
 mvn verify
 
-# 2. Check code style
-mvn spotless:check
+# ktestify-cucumber / plugins: also run the integration suite
+mvn verify -Pintegration-tests -Dcucumber.it.tags="@integration"
 ```
 
-<!-- Add any additional test steps specific to this PR -->
+<!-- Add PR-specific steps here: feature file to run, config to set, expected output… -->
 
----
+## 📸 Logs / screenshots
 
-## 📸 Screenshots / Logs
+<!-- Optional. Wrap long output so the PR stays readable: -->
 
-<!-- If applicable, paste relevant log output or screenshots. -->
+<details>
+<summary>Output</summary>
 
----
+```text
 
-## 📚 Additional Context
+```
 
-<!-- Any other information reviewers should know. -->
+</details>
 
+## 💬 Notes for reviewers
+
+<!-- Optional: design decisions, trade-offs, alternatives you rejected,
+     areas you'd like a closer look at, or follow-up work planned. -->

@@ -45,7 +45,7 @@
         <dependency>
             <groupId>io.github.ktestify</groupId>
             <artifactId>ktestify-core</artifactId>
-            <version>1.2.4</version>
+            <version>1.2.5-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>io.github.ktestify</groupId>

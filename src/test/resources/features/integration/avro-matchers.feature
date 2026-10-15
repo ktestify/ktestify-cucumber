@@ -118,6 +118,20 @@ Feature: Avro record matcher coverage
       | avro-out   | 2                    | integration/avro-expected-1.json,integration/avro-expected-2.json | createdAt    | 30                  | 60                |
 
   @avroBatch
+  Scenario: Batch of 2 Avro records sent out of order matched with lazy batchMatchStrategy
+    When record from file based on schema is sent
+      | topicAlias | file                            | schemaName | recordKey      |
+      | avro-in    | integration/avro-payload-2.json | Order      | avro-batch-005 |
+
+    And record from file based on schema is sent
+      | topicAlias | file                            | schemaName | recordKey      |
+      | avro-in    | integration/avro-payload-1.json | Order      | avro-batch-006 |
+
+    Then expected records from files based on schema
+      | topicAlias | expectedRecordsCount | files                                                             | batchMatchStrategy | excludedKeys | consumerReadTimeout | consumerDeltaTime |
+      | avro-out   | 2                    | integration/avro-expected-1.json,integration/avro-expected-2.json | lazy               | createdAt    | 30                  | 60                |
+
+  @avroBatch
   Scenario: Avro batch — createdAt excluded from each record comparison
     # Producer may stamp createdAt at runtime; exclude it so only business fields are compared.
     When record from file based on schema is sent

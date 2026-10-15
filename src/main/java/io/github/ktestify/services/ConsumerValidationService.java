@@ -15,9 +15,6 @@
  */
 package io.github.ktestify.services;
 
-import static io.github.ktestify.match.RecordMatcherFactory.*;
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
-
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.exceptions.ConsumerException;
 import io.github.ktestify.exceptions.FetchTimeoutException;
@@ -25,12 +22,17 @@ import io.github.ktestify.io.kafka.ConsumerContext;
 import io.github.ktestify.io.kafka.KafkaClientFactory;
 import io.github.ktestify.io.kafka.impl.AvroKafkaConsumer;
 import io.github.ktestify.io.kafka.impl.RawKafkaConsumer;
+import io.github.ktestify.match.BatchMatchStrategy;
 import io.github.ktestify.match.KeyMatchStrategy;
 import io.github.ktestify.models.Topic;
-import java.util.*;
-import java.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.generic.GenericRecord;
+
+import java.util.*;
+import java.util.concurrent.*;
+
+import static io.github.ktestify.match.RecordMatcherFactory.*;
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
 
 /**
  * Orchestrates Kafka consumer validation for Cucumber step definitions.
@@ -258,6 +260,7 @@ public class ConsumerValidationService {
      */
     public void validateRawBatch(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
         List<String> files = splitAndResolve(assets, getString(row, DATA_TABLE_FILES));
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         int expectedCount = Integer.parseInt(getString(row, DATA_TABLE_EXPECTED_RECORDS_COUNT));
         Long readTimeout = getReadTimeoutMs(row);
         Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
@@ -267,6 +270,9 @@ public class ConsumerValidationService {
                 .consumer(KafkaClientFactory.createRawConsumer())
                 .matchMethod(METHOD_MATCH_FILE)
                 .matchFilePaths(files)
+                .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
+                .batchMatchStrategy(getBatchMatchStrategy(row))
                 .isBatchConsumer(true)
                 .batchSize(expectedCount)
                 .readTimeout(readTimeout)
@@ -632,6 +638,7 @@ public class ConsumerValidationService {
      */
     public void validateAvroBatch(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
         List<String> files = splitAndResolve(assets, getString(row, DATA_TABLE_FILES));
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         int expectedCount = Integer.parseInt(getString(row, DATA_TABLE_EXPECTED_RECORDS_COUNT));
         List<String> excluded = splitComma(getString(row, DATA_TABLE_FIELD_TO_MATCH_EXCLUDED_KEYS));
         Long readTimeout = getReadTimeoutMs(row);
@@ -642,6 +649,9 @@ public class ConsumerValidationService {
                 .consumer(KafkaClientFactory.createAvroConsumer())
                 .matchMethod(METHOD_MATCH_FILE)
                 .matchFilePaths(files)
+                .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
+                .batchMatchStrategy(getBatchMatchStrategy(row))
                 .excludedFields(excluded)
                 .isBatchConsumer(true)
                 .batchSize(expectedCount)
@@ -833,5 +843,18 @@ public class ConsumerValidationService {
      */
     private static KeyMatchStrategy getKeyMatchStrategy(Map<String, String> row) {
         return KeyMatchStrategy.fromString(getString(row, DATA_TABLE_KEY_MATCH_STRATEGY));
+    }
+
+    /**
+     * Reads the optional {@code batchMatchStrategy} column from the DataTable row and parses it into a
+     * {@link BatchMatchStrategy}. Returns {@link BatchMatchStrategy#POSITIONAL} when the column is absent or
+     * unrecognized, preserving backward compatibility.
+     *
+     * @param row the DataTable row
+     * @return the parsed strategy, never {@code null}
+     * @since 1.2.3
+     */
+    private static BatchMatchStrategy getBatchMatchStrategy(Map<String, String> row) {
+        return BatchMatchStrategy.fromString(getString(row, DATA_TABLE_BATCH_MATCH_STRATEGY));
     }
 }

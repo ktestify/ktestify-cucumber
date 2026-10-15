@@ -15,21 +15,24 @@
  */
 package io.github.ktestify.services;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.exceptions.ConsumerException;
 import io.github.ktestify.exceptions.FetchTimeoutException;
+import io.github.ktestify.match.BatchMatchStrategy;
 import io.github.ktestify.match.KeyMatchStrategy;
+import io.github.ktestify.match.MatchContext;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for the private helper methods of {@link ConsumerValidationService}.
@@ -217,6 +220,137 @@ class ConsumerValidationServiceHelpersTest {
         }
     }
 
+    // ── getBatchMatchStrategy ─────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("getBatchMatchStrategy(row)")
+    class GetBatchMatchStrategy {
+
+        @Test
+        @DisplayName("returns POSITIONAL when batchMatchStrategy column is absent")
+        void positionalWhenAbsent() throws Exception {
+            assertEquals(BatchMatchStrategy.POSITIONAL, invokeGetBatchMatchStrategy(Map.of()));
+        }
+
+        @Test
+        @DisplayName("returns POSITIONAL when batchMatchStrategy is blank")
+        void positionalWhenBlank() throws Exception {
+            Map<String, String> row = new HashMap<>();
+            row.put("batchMatchStrategy", "   ");
+            assertEquals(BatchMatchStrategy.POSITIONAL, invokeGetBatchMatchStrategy(row));
+        }
+
+        @Test
+        @DisplayName("returns POSITIONAL when value is 'positional' or 'ordered'")
+        void parsesPositional() throws Exception {
+            assertEquals(
+                    BatchMatchStrategy.POSITIONAL,
+                    invokeGetBatchMatchStrategy(Map.of("batchMatchStrategy", "positional")));
+            assertEquals(
+                    BatchMatchStrategy.POSITIONAL,
+                    invokeGetBatchMatchStrategy(Map.of("batchMatchStrategy", "ordered")));
+        }
+
+        @Test
+        @DisplayName("returns LAZY when value is 'lazy'")
+        void parsesLazy() throws Exception {
+            assertEquals(BatchMatchStrategy.LAZY, invokeGetBatchMatchStrategy(Map.of("batchMatchStrategy", "lazy")));
+        }
+
+        @Test
+        @DisplayName("returns LAZY when value is 'fuzzy'")
+        void parsesFuzzy() throws Exception {
+            assertEquals(BatchMatchStrategy.LAZY, invokeGetBatchMatchStrategy(Map.of("batchMatchStrategy", "fuzzy")));
+        }
+
+        @Test
+        @DisplayName("returns LAZY when value is 'unordered' or 'any-order'")
+        void parsesUnorderedAndAnyOrder() throws Exception {
+            assertEquals(
+                    BatchMatchStrategy.LAZY, invokeGetBatchMatchStrategy(Map.of("batchMatchStrategy", "unordered")));
+            assertEquals(
+                    BatchMatchStrategy.LAZY, invokeGetBatchMatchStrategy(Map.of("batchMatchStrategy", "any-order")));
+        }
+
+        @Test
+        @DisplayName("returns POSITIONAL for unrecognized value")
+        void positionalForUnrecognized() throws Exception {
+            assertEquals(
+                    BatchMatchStrategy.POSITIONAL,
+                    invokeGetBatchMatchStrategy(Map.of("batchMatchStrategy", "unknown")));
+        }
+
+        @Test
+        @DisplayName("parses case-insensitively")
+        void parsesCaseInsensitively() throws Exception {
+            assertEquals(BatchMatchStrategy.LAZY, invokeGetBatchMatchStrategy(Map.of("batchMatchStrategy", "LAZY")));
+        }
+    }
+
+    // ── buildAvroFieldValueMatchContext / parseKeyValuePairs ──────────────────
+
+    @Nested
+    @DisplayName("buildAvroFieldValueMatchContext(row)")
+    class BuildAvroFieldValueMatchContext {
+
+        @Test
+        @DisplayName("builds single-field MatchContext when key and value are provided")
+        void singleFieldMatchContext() throws Exception {
+            MatchContext ctx = invokeBuildAvroFieldValueMatchContext(Map.of("key", "status", "value", "PENDING"));
+            assertEquals("status", ctx.getMatchKey());
+            assertEquals("PENDING", ctx.getMatchValue());
+            assertTrue(ctx.getMatchKeyValues().isEmpty());
+        }
+
+        @Test
+        @DisplayName("builds multi-field MatchContext when keys and values are provided")
+        void multiFieldMatchContext() throws Exception {
+            MatchContext ctx =
+                    invokeBuildAvroFieldValueMatchContext(Map.of("keys", "status;amount", "values", "PENDING;299.5"));
+            assertEquals(Map.of("status", "PENDING", "amount", "299.5"), ctx.getMatchKeyValues());
+        }
+
+        @Test
+        @DisplayName("throws IllegalArgumentException when keys and values counts differ")
+        void throwsWhenCountsDiffer() {
+            Exception wrapper = assertThrows(
+                    Exception.class, () -> invokeBuildAvroFieldValueMatchContext(Map.of("keys", "a;b", "values", "1")));
+            assertInstanceOf(IllegalArgumentException.class, wrapper.getCause());
+        }
+
+        @Test
+        @DisplayName("throws IllegalArgumentException when a key token is blank")
+        void throwsWhenKeyIsBlank() {
+            Exception wrapper = assertThrows(
+                    Exception.class,
+                    () -> invokeBuildAvroFieldValueMatchContext(Map.of("keys", "a; ", "values", "1;2")));
+            assertInstanceOf(IllegalArgumentException.class, wrapper.getCause());
+        }
+    }
+
+    // ── splitAndResolve / getInt / getReadTimeoutMs / now ─────────────────────
+
+    @Nested
+    @DisplayName("Other private helpers")
+    class OtherHelpers {
+
+        @Test
+        @DisplayName("splitAndResolve resolves each comma-separated path against assets directory")
+        void splitAndResolvePaths() throws Exception {
+            KtestifyAssetsDirectory assets =
+                    KtestifyAssetsDirectory.builder().absolutePath("/assets").build();
+            List<String> resolved = invokeSplitAndResolve(assets, "a.json, b.json");
+            assertEquals(List.of("/assets/a.json", "/assets/b.json"), resolved);
+        }
+
+        @Test
+        @DisplayName("getInt parses integer or returns null when absent")
+        void getIntHelper() throws Exception {
+            assertEquals(3, invokeGetInt(Map.of("count", " 3 "), "count"));
+            assertNull(invokeGetInt(Map.of(), "count"));
+        }
+    }
+
     @Nested
     @DisplayName("isTimeoutLikeFailure(error)")
     class TimeoutClassification {
@@ -277,6 +411,33 @@ class ConsumerValidationServiceHelpersTest {
         Method m = ConsumerValidationService.class.getDeclaredMethod("getKeyMatchStrategy", Map.class);
         m.setAccessible(true);
         return (KeyMatchStrategy) m.invoke(null, row);
+    }
+
+    private static BatchMatchStrategy invokeGetBatchMatchStrategy(Map<String, String> row) throws Exception {
+        Method m = ConsumerValidationService.class.getDeclaredMethod("getBatchMatchStrategy", Map.class);
+        m.setAccessible(true);
+        return (BatchMatchStrategy) m.invoke(null, row);
+    }
+
+    private static MatchContext invokeBuildAvroFieldValueMatchContext(Map<String, String> row) throws Exception {
+        Method m = ConsumerValidationService.class.getDeclaredMethod("buildAvroFieldValueMatchContext", Map.class);
+        m.setAccessible(true);
+        return (MatchContext) m.invoke(null, row);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> invokeSplitAndResolve(KtestifyAssetsDirectory assets, String commaSeparated)
+            throws Exception {
+        Method m = ConsumerValidationService.class.getDeclaredMethod(
+                "splitAndResolve", KtestifyAssetsDirectory.class, String.class);
+        m.setAccessible(true);
+        return (List<String>) m.invoke(null, assets, commaSeparated);
+    }
+
+    private static Integer invokeGetInt(Map<String, String> row, String col) throws Exception {
+        Method m = ConsumerValidationService.class.getDeclaredMethod("getInt", Map.class, String.class);
+        m.setAccessible(true);
+        return (Integer) m.invoke(null, row, col);
     }
 
     private static boolean invokeIsTimeoutLikeFailure(Throwable failure) throws Exception {
