@@ -15,6 +15,9 @@
  */
 package io.github.ktestify.services;
 
+import static io.github.ktestify.match.RecordMatcherFactory.*;
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
+
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.exceptions.ConsumerException;
 import io.github.ktestify.exceptions.FetchTimeoutException;
@@ -24,14 +27,10 @@ import io.github.ktestify.io.kafka.impl.AvroKafkaConsumer;
 import io.github.ktestify.io.kafka.impl.RawKafkaConsumer;
 import io.github.ktestify.match.KeyMatchStrategy;
 import io.github.ktestify.models.Topic;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.avro.generic.GenericRecord;
-
 import java.util.*;
 import java.util.concurrent.*;
-
-import static io.github.ktestify.match.RecordMatcherFactory.*;
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.avro.generic.GenericRecord;
 
 /**
  * Orchestrates Kafka consumer validation for Cucumber step definitions.
@@ -483,6 +482,7 @@ public class ConsumerValidationService {
     public void validateAvroFromFile(
             Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets, Long referenceTimestamp) {
         String file = resolve(assets, getString(row, DATA_TABLE_FILE));
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         List<String> excluded = splitComma(getString(row, DATA_TABLE_FIELD_TO_MATCH_EXCLUDED_KEYS));
         Long readTimeout = getReadTimeoutMs(row);
         Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
@@ -492,6 +492,8 @@ public class ConsumerValidationService {
                 .consumer(KafkaClientFactory.createAvroConsumer())
                 .matchMethod(METHOD_MATCH_FILE)
                 .matchFilePath(file)
+                .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .excludedFields(excluded)
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
@@ -529,6 +531,7 @@ public class ConsumerValidationService {
      * @see #validateRawFromFile(Map, Topic, KtestifyAssetsDirectory, Long)
      */
     public void validateAvroFieldValue(Map<String, String> row, Topic topic, Long referenceTimestamp) {
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
         Long readTimeout = getReadTimeoutMs(row);
         Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
 
@@ -536,6 +539,8 @@ public class ConsumerValidationService {
                 .topic(topic)
                 .consumer(KafkaClientFactory.createAvroConsumer())
                 .matchMethod(METHOD_FIELDS_TO_MATCH)
+                .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
                 .readTimeout(readTimeout)
                 .consumerDeltaTime(deltaTime)
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())

@@ -15,12 +15,22 @@
  */
 package io.github.ktestify;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.AdditionalMatchers.aryEq;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import com.typesafe.config.ConfigFactory;
 import io.cucumber.core.cli.Main;
 import io.github.ktestify.config.KtestifyConfig;
 import io.github.ktestify.exceptions.PluginException;
 import io.github.ktestify.plugin.PluginContext;
 import io.github.ktestify.plugin.PluginRegistry;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LogEvent;
@@ -33,17 +43,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedStatic;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.AdditionalMatchers.aryEq;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 class KtestifyMainTest {
     private PluginRegistry registry;
