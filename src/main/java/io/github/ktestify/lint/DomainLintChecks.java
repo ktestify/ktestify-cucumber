@@ -31,6 +31,8 @@ import java.util.*;
  *   <li>every {@code topicAlias} / {@code schemaAlias} / {@code namespaceAlias} referenced in a Scenario is declared in
  *       the corresponding Background table ({@code D002})
  *   <li>every value in a {@code file} / {@code files} column exists in the feature's assets folder ({@code D003})
+ *   <li>every step in a Background or Scenario matches a step definition in {@code ktestify-cucumber} or its plugins
+ *       ({@code D005})
  * </ul>
  *
  * <p>Alias declaration is derived from the real step catalogue: the Background steps {@code namespace(s)}, {@code input
@@ -94,7 +96,31 @@ final class DomainLintChecks {
         }
 
         checkAliases(backgroundSteps, scenarioSteps, options, out);
+        checkUndefinedSteps(backgroundSteps, options, out);
+        checkUndefinedSteps(scenarioSteps, options, out);
         return out;
+    }
+
+    // ---- D005: every step must match a defined step in ktestify-cucumber or its plugins ----
+
+    private static void checkUndefinedSteps(List<Step> steps, LintOptions options, List<LintViolation> out) {
+        for (Step step : steps) {
+            String text = step.getText();
+            if (text == null || text.isBlank()) {
+                continue; // covered by G008
+            }
+            if (!StepDefinitionCatalog.isDefinedStep(text)) {
+                add(
+                        out,
+                        options,
+                        new LintViolation(
+                                LintRule.D005,
+                                step.getLocation().getLine(),
+                                1,
+                                "Undefined step '" + step.getKeyword().trim() + " " + text.trim()
+                                        + "': no matching step definition in ktestify-cucumber or its plugins."));
+            }
+        }
     }
 
     // ---- D001: no whitespace inside filename-looking cells ---------------------------------

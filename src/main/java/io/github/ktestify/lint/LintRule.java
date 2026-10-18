@@ -74,7 +74,9 @@ public enum LintRule {
     /** A referenced asset file is missing from the assets folder. */
     D003("D003", Severity.ERROR, "Referenced file is missing from the assets folder."),
     /** The assets directory does not exist; file-existence checks are skipped. */
-    D004("D004", Severity.WARN, "Assets directory not found; file-existence checks skipped.");
+    D004("D004", Severity.WARN, "Assets directory not found; file-existence checks skipped."),
+    /** A step is not defined in ktestify-cucumber or any loaded plugin. */
+    D005("D005", Severity.ERROR, "Undefined step: no matching step definition in ktestify-cucumber or its plugins.");
 
     private final String id;
     private final Severity severity;

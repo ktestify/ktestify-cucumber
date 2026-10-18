@@ -16,13 +16,14 @@
 package io.github.ktestify.lint;
 
 import io.github.ktestify.lint.LintReportFormatter.Format;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * CLI entry point for feature-file linting.
@@ -215,7 +216,7 @@ public final class KtestifyLintMain {
 
                 Options:
                   --format <fmt>            text (default), json, or codeclimate (GitLab Code Quality)
-                  --no-semantic             skip the D-rules (alias and file checks)
+                  --no-semantic             skip the D-rules (alias, file, and step checks)
                   --no-file-check           skip on-disk asset file-existence checks (D003/D004)
                   --assets-subdir <name>    assets folder beside each feature file (default: assets)
                   --assets-dir <path>       absolute assets folder, overrides --assets-subdir

@@ -15,15 +15,19 @@
  */
 package io.github.ktestify.lint;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class FeatureLinterTest {
 
@@ -159,9 +163,58 @@ class FeatureLinterTest {
     @ValueSource(
             strings = {
                 "G001", "G002", "G003", "G004", "G005", "G006", "G007", "G008", "G009", "G010", "G011", "G012", "G013",
-                "G014", "G015", "G016", "G017", "D001", "D002", "D003", "D004"
+                "G014", "G015", "G016", "G017", "D001", "D002", "D003", "D004", "D005"
             })
     void everyRuleIdResolves(String id) {
         assertNotNull(LintRule.byId(id));
+    }
+
+    @Test
+    void undefinedStepIsReportedAsD005(@TempDir Path tempDir) throws IOException {
+        Path feature = tempDir.resolve("undefined-step.feature");
+        Files.writeString(feature, """
+                Feature: Undefined step test
+
+                  Background:
+                    Given namespace
+                      | namespace |
+                      | ktestify  |
+
+                  Scenario: Uses an undefined step
+                    When I do something that does not exist
+                """, StandardCharsets.UTF_8);
+        List<LintRule> rules = lintRules(feature, new LintOptions(true, false, "assets", null, Set.of()));
+        assertTrue(rules.contains(LintRule.D005));
+    }
+
+    @Test
+    void coreParameterizedAndPluginStepsAreAcceptedByD005(@TempDir Path tempDir) throws IOException {
+        Path feature = tempDir.resolve("valid-steps.feature");
+        Files.writeString(feature, """
+                Feature: Valid core and plugin steps
+
+                  Background:
+                    Given HTTP endpoint
+                      | endpointAlias | baseUrl                  |
+                      | api           | http://localhost:8080/api |
+                    Given Azure Blob Storage container
+                      | containerName | containerAlias |
+                      | my-container  | my-blob        |
+
+                  Scenario: Wait, clear, HTTP, and Azure Blob steps
+                    When HTTP request is sent
+                      | endpointAlias | method | path    | responseAlias |
+                      | api           | GET    | /health | resp          |
+                    And wait for 5 seconds
+                    And clear known messages
+                    Then expected HTTP response status
+                      | responseAlias | statusCode |
+                      | resp          | 200        |
+                    And blob should exist
+                      | containerAlias | blobName | readTimeout |
+                      | my-blob        | test.txt | 5           |
+                """, StandardCharsets.UTF_8);
+        List<LintRule> rules = lintRules(feature, new LintOptions(true, false, "assets", null, Set.of()));
+        assertFalse(rules.contains(LintRule.D005));
     }
 }
