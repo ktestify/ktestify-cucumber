@@ -15,24 +15,23 @@
  */
 package io.github.ktestify.services;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.exceptions.ConsumerException;
 import io.github.ktestify.exceptions.FetchTimeoutException;
 import io.github.ktestify.match.BatchMatchStrategy;
 import io.github.ktestify.match.KeyMatchStrategy;
 import io.github.ktestify.match.MatchContext;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for the private helper methods of {@link ConsumerValidationService}.

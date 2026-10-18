@@ -15,6 +15,9 @@
  */
 package io.github.ktestify.services;
 
+import static io.github.ktestify.match.RecordMatcherFactory.*;
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
+
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.exceptions.ConsumerException;
 import io.github.ktestify.exceptions.FetchTimeoutException;
@@ -25,14 +28,10 @@ import io.github.ktestify.io.kafka.impl.RawKafkaConsumer;
 import io.github.ktestify.match.BatchMatchStrategy;
 import io.github.ktestify.match.KeyMatchStrategy;
 import io.github.ktestify.models.Topic;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.avro.generic.GenericRecord;
-
 import java.util.*;
 import java.util.concurrent.*;
-
-import static io.github.ktestify.match.RecordMatcherFactory.*;
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.avro.generic.GenericRecord;
 
 /**
  * Orchestrates Kafka consumer validation for Cucumber step definitions.
@@ -261,6 +260,7 @@ public class ConsumerValidationService {
     public void validateRawBatch(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
         List<String> files = splitAndResolve(assets, getString(row, DATA_TABLE_FILES));
         String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
+        List<String> expectedKeys = splitComma(getString(row, DATA_TABLE_EXPECTED_RECORD_KEYS));
         int expectedCount = Integer.parseInt(getString(row, DATA_TABLE_EXPECTED_RECORDS_COUNT));
         Long readTimeout = getReadTimeoutMs(row);
         Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
@@ -271,6 +271,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_MATCH_FILE)
                 .matchFilePaths(files)
                 .expectedRecordKey(expectedKey)
+                .expectedRecordKeys(expectedKeys)
                 .keyMatchStrategy(getKeyMatchStrategy(row))
                 .batchMatchStrategy(getBatchMatchStrategy(row))
                 .isBatchConsumer(true)
@@ -280,6 +281,13 @@ public class ConsumerValidationService {
                 .referenceTimestamp(now())
                 .build();
 
+        log.info(
+                "Starting raw batch validation on topic '{}' (expectedCount={}, strategy={}, expectedKeys={}, files={}).",
+                topic.getNamespacedTopic(),
+                expectedCount,
+                ctx.getBatchMatchStrategy(),
+                !expectedKeys.isEmpty() ? expectedKeys : (expectedKey != null ? expectedKey : "<any>"),
+                files);
         execute(ctx, new RawKafkaConsumer(ctx), readTimeout);
     }
 
@@ -312,6 +320,12 @@ public class ConsumerValidationService {
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
+        log.info(
+                "Watching topic '{}' to ensure NO record arrives (expectedKey={}, strategy={}, timeout={}ms).",
+                topic.getNamespacedTopic(),
+                expectedKey != null ? "'" + expectedKey + "'" : "<any>",
+                ctx.getKeyMatchStrategy(),
+                readTimeout != null ? readTimeout : "default");
         // A record appearing within the timeout = test failure
         boolean recordArrived;
         try {
@@ -324,6 +338,7 @@ public class ConsumerValidationService {
             throw e;
         }
         if (recordArrived) {
+            log.error("Negative watcher failed: unexpected record arrived on topic '{}'.", topic.getNamespacedTopic());
             throw new AssertionError(
                     "Expected no record on topic '" + topic.getNamespacedTopic() + "' but one was found.");
         }
@@ -354,6 +369,12 @@ public class ConsumerValidationService {
                 .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
                 .build();
 
+        log.info(
+                "Watching topic '{}' for record arrival (expectedKey={}, strategy={}, timeout={}ms).",
+                topic.getNamespacedTopic(),
+                expectedKey != null ? "'" + expectedKey + "'" : "<any>",
+                ctx.getKeyMatchStrategy(),
+                readTimeout != null ? readTimeout : "default");
         execute(ctx, new RawKafkaConsumer(ctx), readTimeout);
     }
 
@@ -639,6 +660,7 @@ public class ConsumerValidationService {
     public void validateAvroBatch(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
         List<String> files = splitAndResolve(assets, getString(row, DATA_TABLE_FILES));
         String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
+        List<String> expectedKeys = splitComma(getString(row, DATA_TABLE_EXPECTED_RECORD_KEYS));
         int expectedCount = Integer.parseInt(getString(row, DATA_TABLE_EXPECTED_RECORDS_COUNT));
         List<String> excluded = splitComma(getString(row, DATA_TABLE_FIELD_TO_MATCH_EXCLUDED_KEYS));
         Long readTimeout = getReadTimeoutMs(row);
@@ -650,6 +672,7 @@ public class ConsumerValidationService {
                 .matchMethod(METHOD_MATCH_FILE)
                 .matchFilePaths(files)
                 .expectedRecordKey(expectedKey)
+                .expectedRecordKeys(expectedKeys)
                 .keyMatchStrategy(getKeyMatchStrategy(row))
                 .batchMatchStrategy(getBatchMatchStrategy(row))
                 .excludedFields(excluded)
@@ -660,6 +683,14 @@ public class ConsumerValidationService {
                 .referenceTimestamp(now())
                 .build();
 
+        log.info(
+                "Starting Avro batch validation on topic '{}' (expectedCount={}, strategy={}, expectedKeys={}, excluded={}, files={}).",
+                topic.getNamespacedTopic(),
+                expectedCount,
+                ctx.getBatchMatchStrategy(),
+                !expectedKeys.isEmpty() ? expectedKeys : (expectedKey != null ? expectedKey : "<any>"),
+                excluded,
+                files);
         execute(ctx, new AvroKafkaConsumer(ctx), readTimeout);
     }
 
@@ -737,6 +768,7 @@ public class ConsumerValidationService {
             return Boolean.TRUE.equals(future.get(timeoutMs, TimeUnit.MILLISECONDS));
         } catch (TimeoutException e) {
             future.cancel(true);
+            log.error("Outer executor timeout exceeded after {}ms.", timeoutMs);
             throw new ConsumerException("Outer timeout exceeded after " + timeoutMs + "ms.", e);
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();
@@ -746,9 +778,11 @@ public class ConsumerValidationService {
             ConsumerException consumerException = findCause(cause, ConsumerException.class);
             if (consumerException != null) throw consumerException;
 
+            log.error("Consumer execution failed: {}", cause.getMessage(), cause);
             throw new ConsumerException("Consumer execution failed: " + cause.getMessage(), cause);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            log.warn("Consumer execution thread interrupted.");
             throw new ConsumerException("Consumer thread interrupted.");
         }
     }

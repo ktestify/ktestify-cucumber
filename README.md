@@ -148,23 +148,23 @@ The value is case-insensitive and tolerant of hyphens/underscores (`starts-with`
 
 ## Batch matching strategies
 
-When using batch validation steps (`Then expected records from files` or `Then expected records from files based on schema`), you can optionally include a `batchMatchStrategy` column to control how consumed records are paired with expected files.
+When using batch validation steps (`Then expected records from files` or `Then expected records from files based on schema`), you can optionally include `expectedRecordKeys` (comma-separated keys paired 1-to-1 with `files`) and a `batchMatchStrategy` column to control how consumed records are paired with expected files and keys.
 
 | Strategy | Accepted values | Behaviour |
 |---|---|---|
-| `POSITIONAL` | `positional`, `ordered`, `index`, `strict` | Record at index `i` must match file at index `i` (default) |
-| `LAZY` | `lazy`, `fuzzy`, `unordered`, `any_order`, `any-order` | Order-independent 1-to-1 matching without replacement |
+| `POSITIONAL` | `positional`, `ordered`, `index`, `strict` | Record at index `i` must match file at index `i` (and `expectedRecordKeys[i]` when set) (default) |
+| `LAZY` | `lazy`, `fuzzy`, `unordered`, `any_order`, `any-order` | Order-independent 1-to-1 matching without replacement (matches both key and file when `expectedRecordKeys` is set) |
 
 ```gherkin
 # Positional (default): record 1 -> file 1, record 2 -> file 2, record 3 -> file 3
 Then expected records from files
-  | topicAlias | expectedRecordsCount | files                                                                                                 | consumerReadTimeout | consumerDeltaTime |
-  | batch-out  | 3                    | integration/batch-expected-1.json,integration/batch-expected-2.json,integration/batch-expected-3.json | 30                  | 60                |
+  | topicAlias | expectedRecordsCount | files                                                                                                 | expectedRecordKeys            | consumerReadTimeout | consumerDeltaTime |
+  | batch-out  | 3                    | integration/batch-expected-1.json,integration/batch-expected-2.json,integration/batch-expected-3.json | batch-003,batch-004,batch-005 | 30                  | 60                |
 
 # Lazy / Fuzzy: records sent in order (3, 1, 2) still match files listed as (1, 2, 3)
 Then expected records from files
-  | topicAlias | expectedRecordsCount | files                                                                                                 | batchMatchStrategy | consumerReadTimeout | consumerDeltaTime |
-  | batch-out  | 3                    | integration/batch-expected-1.json,integration/batch-expected-2.json,integration/batch-expected-3.json | lazy               | 30                  | 60                |
+  | topicAlias | expectedRecordsCount | files                                                                                                 | expectedRecordKeys            | batchMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+  | batch-out  | 3                    | integration/batch-expected-1.json,integration/batch-expected-2.json,integration/batch-expected-3.json | batch-007,batch-008,batch-006 | lazy               | 30                  | 60                |
 ```
 
 ---

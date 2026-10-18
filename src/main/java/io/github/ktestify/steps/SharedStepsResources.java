@@ -21,6 +21,7 @@ import io.github.ktestify.entities.KtestifyNamespace;
 import io.github.ktestify.entities.KtestifySchema;
 import io.github.ktestify.manager.ObjectManager;
 import io.github.ktestify.models.Topic;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * PicoContainer-managed shared state injected into all step definition classes.
@@ -33,6 +34,7 @@ import io.github.ktestify.models.Topic;
  * specific scenario. This means you can set the assets path once in {@code local.conf} / an env var and omit the step
  * entirely from feature files.
  */
+@Slf4j
 public class SharedStepsResources {
 
     /** Registry for Kafka topics (both INPUT and OUTPUT). Keyed by topic name and/or alias. */
@@ -56,18 +58,17 @@ public class SharedStepsResources {
 
         // Pre-populate assetsDirectory from config so feature files don't need to
         // repeat the path — a single setting in local.conf / env var is enough.
-        cfg.getFramework()
-                .getAssetsDirectory()
-                .filter(path -> !path.isBlank())
-                .ifPresent(path -> assetsDirectory =
-                        KtestifyAssetsDirectory.builder().absolutePath(path).build());
+        cfg.getFramework().getAssetsDirectory().filter(path -> !path.isBlank()).ifPresent(path -> {
+            assetsDirectory =
+                    KtestifyAssetsDirectory.builder().absolutePath(path).build();
+            log.debug("Pre-populated scenario assets directory from config: '{}'", path);
+        });
 
         // Pre-register a default namespace from config (ktestify.kafka.topic-namespace).
         // The 'Given namespace' step overrides or adds to this per-scenario.
-        cfg.getKafka()
-                .getTopicNamespace()
-                .filter(ns -> !ns.isBlank())
-                .ifPresent(ns -> namespaces.register(
-                        ns, KtestifyNamespace.builder().namespace(ns).build()));
+        cfg.getKafka().getTopicNamespace().filter(ns -> !ns.isBlank()).ifPresent(ns -> {
+            namespaces.register(ns, KtestifyNamespace.builder().namespace(ns).build());
+            log.debug("Pre-registered default topic namespace from config: '{}'", ns);
+        });
     }
 }

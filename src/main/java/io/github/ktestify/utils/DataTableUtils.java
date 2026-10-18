@@ -151,6 +151,19 @@ public final class DataTableUtils {
         public static final String EXPECTED_RECORD_KEY = "expectedRecordKey";
 
         /**
+         * DataTable column for comma-separated expected record keys in batch steps ({@code expected records from files}
+         * and {@code expected records from files based on schema}).
+         *
+         * <p>When present, each expected key is paired with the corresponding expected file in {@code files}, using
+         * {@code batchMatchStrategy} ({@code positional} or {@code lazy}) and {@code keyMatchStrategy}.
+         *
+         * @since 1.2.7
+         */
+        public static final String DATA_TABLE_EXPECTED_RECORD_KEYS = "expectedRecordKeys";
+
+        public static final String EXPECTED_RECORD_KEYS = "expectedRecordKeys";
+
+        /**
          * DataTable column for the key match strategy. Optional on all steps that accept
          * {@link #DATA_TABLE_EXPECTED_RECORD_KEY}. Accepts {@code exact}, {@code contains}, {@code starts_with},
          * {@code ends_with}, {@code regex} (case-insensitive, hyphens and spaces tolerated). Defaults to {@code exact}

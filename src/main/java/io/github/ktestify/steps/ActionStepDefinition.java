@@ -71,8 +71,16 @@ public class ActionStepDefinition {
     public void whenRecordFromFileIsSent(DataTable dataTable) {
         List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
         Topic topic = resolveAndAssertSingleTopic(rows);
-        for (Map<String, String> row : rows) {
-            producerService.sendRawFromFile(row, topic, resources.assetsDirectory);
+        log.info("Sending {} raw record(s) to topic '{}'.", rows.size(), topic.getNamespacedTopic());
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info(
+                        "Sending raw record row {}/{} to topic '{}'...",
+                        i + 1,
+                        rows.size(),
+                        topic.getNamespacedTopic());
+            }
+            producerService.sendRawFromFile(rows.get(i), topic, resources.assetsDirectory);
         }
     }
 
@@ -84,8 +92,16 @@ public class ActionStepDefinition {
     public void whenRecordFromFileBasedOnSchemaIsSent(DataTable dataTable) {
         List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
         Topic topic = resolveAndAssertSingleTopic(rows);
-        for (Map<String, String> row : rows) {
-            producerService.sendAvroFromFile(row, topic, resources.assetsDirectory);
+        log.info("Sending {} Avro record(s) to topic '{}'.", rows.size(), topic.getNamespacedTopic());
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info(
+                        "Sending Avro record row {}/{} to topic '{}'...",
+                        i + 1,
+                        rows.size(),
+                        topic.getNamespacedTopic());
+            }
+            producerService.sendAvroFromFile(rows.get(i), topic, resources.assetsDirectory);
         }
     }
 

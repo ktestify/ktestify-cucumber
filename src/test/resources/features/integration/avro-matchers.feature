@@ -128,8 +128,8 @@ Feature: Avro record matcher coverage
       | avro-in    | integration/avro-payload-1.json | Order      | avro-batch-006 |
 
     Then expected records from files based on schema
-      | topicAlias | expectedRecordsCount | files                                                             | batchMatchStrategy | excludedKeys | consumerReadTimeout | consumerDeltaTime |
-      | avro-out   | 2                    | integration/avro-expected-1.json,integration/avro-expected-2.json | lazy               | createdAt    | 30                  | 60                |
+      | topicAlias | expectedRecordsCount | files                                                             | expectedRecordKeys           | batchMatchStrategy | excludedKeys | consumerReadTimeout | consumerDeltaTime |
+      | avro-out   | 2                    | integration/avro-expected-1.json,integration/avro-expected-2.json | avro-batch-006,avro-batch-005 | lazy               | createdAt    | 30                  | 60                |
 
   @avroBatch
   Scenario: Avro batch — createdAt excluded from each record comparison

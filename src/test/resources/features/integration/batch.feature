@@ -51,8 +51,8 @@ Feature: Batch consumer validation
       | batch-in   | integration/batch-payload-3.json | batch-005 |
 
     Then expected records from files
-      | topicAlias | expectedRecordsCount | files                                                                                                 | consumerReadTimeout | consumerDeltaTime |
-      | batch-out  | 3                    | integration/batch-expected-1.json,integration/batch-expected-2.json,integration/batch-expected-3.json | 30                  | 60                |
+      | topicAlias | expectedRecordsCount | files                                                                                                 | expectedRecordKeys            | consumerReadTimeout | consumerDeltaTime |
+      | batch-out  | 3                    | integration/batch-expected-1.json,integration/batch-expected-2.json,integration/batch-expected-3.json | batch-003,batch-004,batch-005 | 30                  | 60                |
 
   @batchLazy
   Scenario: Batch of 3 records sent out of order matched with lazy batchMatchStrategy
@@ -69,8 +69,8 @@ Feature: Batch consumer validation
       | batch-in   | integration/batch-payload-2.json | batch-008 |
 
     Then expected records from files
-      | topicAlias | expectedRecordsCount | files                                                                                                 | batchMatchStrategy | consumerReadTimeout | consumerDeltaTime |
-      | batch-out  | 3                    | integration/batch-expected-1.json,integration/batch-expected-2.json,integration/batch-expected-3.json | lazy               | 30                  | 60                |
+      | topicAlias | expectedRecordsCount | files                                                                                                 | expectedRecordKeys            | batchMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+      | batch-out  | 3                    | integration/batch-expected-1.json,integration/batch-expected-2.json,integration/batch-expected-3.json | batch-007,batch-008,batch-006 | lazy               | 30                  | 60                |
 
   # ── partial batch → negative assertion ────────────────────────────────────
 
