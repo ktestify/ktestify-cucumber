@@ -65,9 +65,16 @@ public class ValidationStepDefinition {
     public void thenExpectedRecordFromFile(DataTable dataTable) {
         List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
         Topic topic = resolveAndAssertSingleTopic(rows);
+        log.info(
+                "Validating {} expected raw record(s) from file on topic '{}'.",
+                rows.size(),
+                topic.getNamespacedTopic());
         long referenceTimestamp = now();
-        for (Map<String, String> row : rows) {
-            consumerService.validateRawFromFile(row, topic, resources.assetsDirectory, referenceTimestamp);
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
+            }
+            consumerService.validateRawFromFile(rows.get(i), topic, resources.assetsDirectory, referenceTimestamp);
         }
     }
 
@@ -79,9 +86,16 @@ public class ValidationStepDefinition {
     public void thenExpectedRecordShouldHaveFieldsMatchingFromFile(DataTable dataTable) {
         List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
         Topic topic = resolveAndAssertSingleTopic(rows);
+        log.info(
+                "Validating {} expected raw positional field(s) on topic '{}'.",
+                rows.size(),
+                topic.getNamespacedTopic());
         long referenceTimestamp = now();
-        for (Map<String, String> row : rows) {
-            consumerService.validateRawFields(row, topic, resources.assetsDirectory, referenceTimestamp);
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
+            }
+            consumerService.validateRawFields(rows.get(i), topic, resources.assetsDirectory, referenceTimestamp);
         }
     }
 
@@ -93,9 +107,13 @@ public class ValidationStepDefinition {
     public void thenExpectedRecordFromFileBasedOnXml(DataTable dataTable) {
         List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
         Topic topic = resolveAndAssertSingleTopic(rows);
+        log.info("Validating {} expected XML record(s) on topic '{}'.", rows.size(), topic.getNamespacedTopic());
         long referenceTimestamp = now();
-        for (Map<String, String> row : rows) {
-            consumerService.validateRawXml(row, topic, resources.assetsDirectory, referenceTimestamp);
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
+            }
+            consumerService.validateRawXml(rows.get(i), topic, resources.assetsDirectory, referenceTimestamp);
         }
     }
 
@@ -107,9 +125,16 @@ public class ValidationStepDefinition {
     public void thenExpectedRecordBasedOnXmlShouldHaveFieldsMatchingFromFile(DataTable dataTable) {
         List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
         Topic topic = resolveAndAssertSingleTopic(rows);
+        log.info(
+                "Validating {} expected XML XPath assertion(s) on topic '{}'.",
+                rows.size(),
+                topic.getNamespacedTopic());
         long referenceTimestamp = now();
-        for (Map<String, String> row : rows) {
-            consumerService.validateRawXPath(row, topic, resources.assetsDirectory, referenceTimestamp);
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
+            }
+            consumerService.validateRawXPath(rows.get(i), topic, resources.assetsDirectory, referenceTimestamp);
         }
     }
 
@@ -121,6 +146,7 @@ public class ValidationStepDefinition {
     public void thenExpectedRecordsFromFiles(DataTable dataTable) {
         Map<String, String> row = singleRow(dataTable, null);
         Topic topic = resolveTopic(row);
+        log.info("Validating batch of raw records from files on topic '{}'.", topic.getNamespacedTopic());
         consumerService.validateRawBatch(row, topic, resources.assetsDirectory);
     }
 
@@ -132,9 +158,16 @@ public class ValidationStepDefinition {
     public void thenExpectedRecordFromFileBasedOnSchema(DataTable dataTable) {
         List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
         Topic topic = resolveAndAssertSingleTopic(rows);
+        log.info(
+                "Validating {} expected Avro record(s) from file on topic '{}'.",
+                rows.size(),
+                topic.getNamespacedTopic());
         long referenceTimestamp = now();
-        for (Map<String, String> row : rows) {
-            consumerService.validateAvroFromFile(row, topic, resources.assetsDirectory, referenceTimestamp);
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
+            }
+            consumerService.validateAvroFromFile(rows.get(i), topic, resources.assetsDirectory, referenceTimestamp);
         }
     }
 
@@ -146,9 +179,16 @@ public class ValidationStepDefinition {
     public void thenExpectedRecordBasedOnSchemaShouldHaveFieldsMatchingFromGivenValue(DataTable dataTable) {
         List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
         Topic topic = resolveAndAssertSingleTopic(rows);
+        log.info(
+                "Validating {} expected Avro field assertion(s) on topic '{}'.",
+                rows.size(),
+                topic.getNamespacedTopic());
         long referenceTimestamp = now();
-        for (Map<String, String> row : rows) {
-            consumerService.validateAvroFieldValue(row, topic, referenceTimestamp);
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
+            }
+            consumerService.validateAvroFieldValue(rows.get(i), topic, referenceTimestamp);
         }
     }
 
@@ -160,6 +200,7 @@ public class ValidationStepDefinition {
     public void thenExpectedRecordsFromFilesBasedOnSchema(DataTable dataTable) {
         Map<String, String> row = singleRow(dataTable, null);
         Topic topic = resolveTopic(row);
+        log.info("Validating batch of Avro records from files on topic '{}'.", topic.getNamespacedTopic());
         consumerService.validateAvroBatch(row, topic, resources.assetsDirectory);
     }
 
@@ -171,9 +212,13 @@ public class ValidationStepDefinition {
     public void thenExpectedRecordKeyMatches(DataTable dataTable) {
         List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
         Topic topic = resolveAndAssertSingleTopic(rows);
+        log.info("Validating {} expected raw record key(s) on topic '{}'.", rows.size(), topic.getNamespacedTopic());
         long referenceTimestamp = now();
-        for (Map<String, String> row : rows) {
-            consumerService.validateRawKeyOnly(row, topic, referenceTimestamp);
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
+            }
+            consumerService.validateRawKeyOnly(rows.get(i), topic, referenceTimestamp);
         }
     }
 
@@ -185,9 +230,16 @@ public class ValidationStepDefinition {
     public void thenExpectedRecordKeyAndValueMatchFromFile(DataTable dataTable) {
         List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
         Topic topic = resolveAndAssertSingleTopic(rows);
+        log.info(
+                "Validating {} expected raw record key+value pair(s) on topic '{}'.",
+                rows.size(),
+                topic.getNamespacedTopic());
         long referenceTimestamp = now();
-        for (Map<String, String> row : rows) {
-            consumerService.validateRawKeyValue(row, topic, resources.assetsDirectory, referenceTimestamp);
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
+            }
+            consumerService.validateRawKeyValue(rows.get(i), topic, resources.assetsDirectory, referenceTimestamp);
         }
     }
 
@@ -199,9 +251,13 @@ public class ValidationStepDefinition {
     public void thenExpectedAvroRecordKeyMatches(DataTable dataTable) {
         List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
         Topic topic = resolveAndAssertSingleTopic(rows);
+        log.info("Validating {} expected Avro record key(s) on topic '{}'.", rows.size(), topic.getNamespacedTopic());
         long referenceTimestamp = now();
-        for (Map<String, String> row : rows) {
-            consumerService.validateAvroKeyOnly(row, topic, referenceTimestamp);
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
+            }
+            consumerService.validateAvroKeyOnly(rows.get(i), topic, referenceTimestamp);
         }
     }
 
@@ -213,9 +269,17 @@ public class ValidationStepDefinition {
     public void andRecordShouldNotAppearInTopic(DataTable dataTable) {
         List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
         Topic topic = resolveAndAssertSingleTopic(rows);
+        log.info("Checking that {} record(s) do NOT appear on topic '{}'.", rows.size(), topic.getNamespacedTopic());
         long referenceTimestamp = now();
-        for (Map<String, String> row : rows) {
-            consumerService.validateNoRecord(row, topic, referenceTimestamp);
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info(
+                        "Checking negative watcher row {}/{} on topic '{}'...",
+                        i + 1,
+                        rows.size(),
+                        topic.getNamespacedTopic());
+            }
+            consumerService.validateNoRecord(rows.get(i), topic, referenceTimestamp);
         }
     }
 
@@ -227,9 +291,17 @@ public class ValidationStepDefinition {
     public void andRecordShouldAppearInTopic(DataTable dataTable) {
         List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
         Topic topic = resolveAndAssertSingleTopic(rows);
+        log.info("Checking that {} record(s) appear on topic '{}'.", rows.size(), topic.getNamespacedTopic());
         long referenceTimestamp = now();
-        for (Map<String, String> row : rows) {
-            consumerService.validateRecordExists(row, topic, referenceTimestamp);
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info(
+                        "Checking positive watcher row {}/{} on topic '{}'...",
+                        i + 1,
+                        rows.size(),
+                        topic.getNamespacedTopic());
+            }
+            consumerService.validateRecordExists(rows.get(i), topic, referenceTimestamp);
         }
     }
 

@@ -53,7 +53,7 @@ public class BackgroundStepDefinition {
         String ns = DataTableUtils.getString(row, DATA_TABLE_NAMESPACE);
         KtestifyNamespace namespace = KtestifyNamespace.builder().namespace(ns).build();
         resources.namespaces.register(ns, namespace);
-        log.debug("Registered namespace '{}'", ns);
+        log.info("Registered namespace '{}'", ns);
     }
 
     @Given("namespaces")
@@ -67,7 +67,7 @@ public class BackgroundStepDefinition {
                     .namespaceAlias(alias)
                     .build();
             resources.namespaces.register(ns, alias, namespace);
-            log.debug("Registered namespace '{}' (alias: '{}')", ns, alias);
+            log.info("Registered namespace '{}' (alias: '{}')", ns, alias);
         }
     }
 
@@ -104,7 +104,12 @@ public class BackgroundStepDefinition {
                     .build();
 
             resources.topics.register(topicName, topicAlias, topic);
-            log.debug("Registered {} topic '{}' (alias: '{}')", type, topicName, topicAlias);
+            log.info(
+                    "Registered {} topic '{}' -> '{}' (alias: '{}')",
+                    type,
+                    topicName,
+                    topic.getNamespacedTopic(),
+                    topicAlias);
         }
     }
 
@@ -117,7 +122,7 @@ public class BackgroundStepDefinition {
         String path = DataTableUtils.getString(dataTable, "absolutePath");
         resources.assetsDirectory =
                 KtestifyAssetsDirectory.builder().absolutePath(path).build();
-        log.debug("Assets directory set to '{}'", path);
+        log.info("Assets directory set to '{}'", path);
     }
 
     // =========================================================================
@@ -137,7 +142,7 @@ public class BackgroundStepDefinition {
                     .schemaVersion(version)
                     .build();
             resources.schemas.register(name, alias, schema);
-            log.debug("Registered schema '{}' (alias: '{}')", name, alias);
+            log.info("Registered schema '{}' (alias: '{}', version: {})", name, alias, version);
         }
     }
 

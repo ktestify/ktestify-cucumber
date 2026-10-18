@@ -117,8 +117,18 @@ public class ProducerValidationService implements AutoCloseable {
 
         try {
             new RawKafkaProducer(ctx).send();
-            log.info("Raw record sent to topic '{}' from file '{}'.", topic.getNamespacedTopic(), filePath);
+            log.info(
+                    "Raw record sent to topic '{}' (key={}, file='{}', headers={}).",
+                    topic.getNamespacedTopic(),
+                    recordKey != null ? "'" + recordKey + "'" : "<null>",
+                    filePath,
+                    headers.keySet());
         } catch (Exception e) {
+            log.error(
+                    "Failed to send raw record to topic '{}' from file '{}': {}",
+                    topic.getNamespacedTopic(),
+                    filePath,
+                    e.getMessage());
             throw new RuntimeException(
                     "Failed to send raw record to topic '" + topic.getNamespacedTopic() + "': " + e.getMessage(), e);
         }
@@ -154,8 +164,19 @@ public class ProducerValidationService implements AutoCloseable {
 
         try {
             new AvroKafkaProducer(ctx).send();
-            log.info("Avro record sent to topic '{}' from file '{}'.", topic.getNamespacedTopic(), filePath);
+            log.info(
+                    "Avro record sent to topic '{}' (key={}, file='{}', schemaName={}, schemaVersion={}).",
+                    topic.getNamespacedTopic(),
+                    recordKey != null ? "'" + recordKey + "'" : "<null>",
+                    filePath,
+                    schemaName != null ? "'" + schemaName + "'" : "<topic-default>",
+                    schemaVersion != null ? schemaVersion : "latest");
         } catch (Exception e) {
+            log.error(
+                    "Failed to send Avro record to topic '{}' from file '{}': {}",
+                    topic.getNamespacedTopic(),
+                    filePath,
+                    e.getMessage());
             throw new RuntimeException(
                     "Failed to send Avro record to topic '" + topic.getNamespacedTopic() + "': " + e.getMessage(), e);
         }
