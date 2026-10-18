@@ -2,7 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.2.7] — 2026-10-18
+
 ### ✨ Features
 
 - Enhance batch matching with expected record keys (#60) — [@nil-malh](https://github.com/nil-malh) ([#60](https://github.com/ktestify/ktestify-cucumber/pull/60))
