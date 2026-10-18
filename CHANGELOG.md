@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 
 - Enhance batch matching with expected record keys (#60) — [@nil-malh](https://github.com/nil-malh) ([#60](https://github.com/ktestify/ktestify-cucumber/pull/60))
 
+- Add support for undefined step detection in linting — [@nil-malh](https://github.com/nil-malh)
+
 
 ## [1.2.6] — 2026-10-15
 
