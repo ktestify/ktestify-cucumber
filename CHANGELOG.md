@@ -2,7 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.2.8] — 2026-11-09
+
 ### ⬆️ Dependency Updates
 
 - Update ktestify-parent version to 1.0.7 (#61) — [@nil-malh](https://github.com/nil-malh) ([#61](https://github.com/ktestify/ktestify-cucumber/pull/61))
