@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file.
 
 - Bump ktestify-core to 1.2.10 (#64) — [@nil-malh](https://github.com/nil-malh) ([#64](https://github.com/ktestify/ktestify-cucumber/pull/64))
 
+- Bump ktestify-plugin-notifications to 0.1.5 (#65) — [@nil-malh](https://github.com/nil-malh) ([#65](https://github.com/ktestify/ktestify-cucumber/pull/65))
+
 
 ## [1.2.8] — 2026-11-09
 
