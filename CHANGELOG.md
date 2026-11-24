@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 
 - Bump ktestify-plugin-notifications to 0.1.5 (#65) — [@nil-malh](https://github.com/nil-malh) ([#65](https://github.com/ktestify/ktestify-cucumber/pull/65))
 
+- Bump ktestify-plugin-azureblob to 0.1.4 (#66) — [@nil-malh](https://github.com/nil-malh) ([#66](https://github.com/ktestify/ktestify-cucumber/pull/66))
+
 
 ## [1.2.8] — 2026-11-09
 
