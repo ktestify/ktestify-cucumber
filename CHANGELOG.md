@@ -2,7 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.2.9] — 2026-11-24
+
 ### ⬆️ Dependency Updates
 
 - Bump io.cucumber:gherkin (#62) *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot]) ([#62](https://github.com/ktestify/ktestify-cucumber/pull/62))
