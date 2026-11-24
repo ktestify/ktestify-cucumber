@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 
 - Bump io.cucumber:gherkin (#62) *(deps)* — [@dependabot[bot]](https://github.com/dependabot[bot]) ([#62](https://github.com/ktestify/ktestify-cucumber/pull/62))
 
+- Bump ktestify-parent to 1.0.8 (#63) — [@nil-malh](https://github.com/nil-malh) ([#63](https://github.com/ktestify/ktestify-cucumber/pull/63))
+
 
 ## [1.2.8] — 2026-11-09
 
