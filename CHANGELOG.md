@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### ✨ Features
+
+- Add Gherkin steps for sending and asserting Kafka tombstones (#68) *(cucumber)* — [@nil-malh](https://github.com/nil-malh) ([#68](https://github.com/ktestify/ktestify-cucumber/pull/68))
+
+
 ## [1.2.9] — 2026-11-24
 
 ### ⬆️ Dependency Updates
