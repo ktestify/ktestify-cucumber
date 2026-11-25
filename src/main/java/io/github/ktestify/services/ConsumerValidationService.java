@@ -15,9 +15,6 @@
  */
 package io.github.ktestify.services;
 
-import static io.github.ktestify.match.RecordMatcherFactory.*;
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
-
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.exceptions.ConsumerException;
 import io.github.ktestify.exceptions.FetchTimeoutException;
@@ -28,10 +25,14 @@ import io.github.ktestify.io.kafka.impl.RawKafkaConsumer;
 import io.github.ktestify.match.BatchMatchStrategy;
 import io.github.ktestify.match.KeyMatchStrategy;
 import io.github.ktestify.models.Topic;
-import java.util.*;
-import java.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.generic.GenericRecord;
+
+import java.util.*;
+import java.util.concurrent.*;
+
+import static io.github.ktestify.match.RecordMatcherFactory.*;
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
 
 /**
  * Orchestrates Kafka consumer validation for Cucumber step definitions.
@@ -371,6 +372,53 @@ public class ConsumerValidationService {
 
         log.info(
                 "Watching topic '{}' for record arrival (expectedKey={}, strategy={}, timeout={}ms).",
+                topic.getNamespacedTopic(),
+                expectedKey != null ? "'" + expectedKey + "'" : "<any>",
+                ctx.getKeyMatchStrategy(),
+                readTimeout != null ? readTimeout : "default");
+        execute(ctx, new RawKafkaConsumer(ctx), readTimeout);
+    }
+
+    /**
+     * Validates that a tombstone record ({@code null} value) arrives on the given topic, optionally matching
+     * {@code expectedRecordKey}. Works for both raw and Avro topics because {@code null} value bytes deserialize to
+     * {@code null} without Schema Registry.
+     *
+     * @param row DataTable row
+     * @param topic the resolved OUTPUT topic
+     * @since 1.2.10
+     */
+    public void validateTombstone(Map<String, String> row, Topic topic) {
+        validateTombstone(row, topic, null);
+    }
+
+    /**
+     * Validates that a tombstone record ({@code null} value) arrives on the given topic, pinning "now" to
+     * {@code referenceTimestamp}.
+     *
+     * @param row DataTable row
+     * @param topic the resolved OUTPUT topic
+     * @param referenceTimestamp epoch ms to pin as "now", or {@code null} to use the live clock
+     * @since 1.2.10
+     */
+    public void validateTombstone(Map<String, String> row, Topic topic, Long referenceTimestamp) {
+        String expectedKey = getString(row, DATA_TABLE_EXPECTED_RECORD_KEY);
+        Long readTimeout = getReadTimeoutMs(row);
+        Long deltaTime = getSecondsToMillis(row, DATA_TABLE_CONSUMER_DELTA_TIME);
+
+        ConsumerContext<String, String> ctx = ConsumerContext.<String, String>builder()
+                .topic(topic)
+                .consumer(KafkaClientFactory.createRawConsumer())
+                .matchMethod(METHOD_MATCH_TOMBSTONE)
+                .expectedRecordKey(expectedKey)
+                .keyMatchStrategy(getKeyMatchStrategy(row))
+                .readTimeout(readTimeout)
+                .consumerDeltaTime(deltaTime)
+                .referenceTimestamp(referenceTimestamp != null ? referenceTimestamp : now())
+                .build();
+
+        log.info(
+                "Validating tombstone record on topic '{}' (expectedKey={}, strategy={}, timeout={}ms).",
                 topic.getNamespacedTopic(),
                 expectedKey != null ? "'" + expectedKey + "'" : "<any>",
                 ctx.getKeyMatchStrategy(),

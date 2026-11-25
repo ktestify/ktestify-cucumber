@@ -15,8 +15,6 @@
  */
 package io.github.ktestify.services;
 
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
-
 import com.google.gson.Gson;
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
 import io.github.ktestify.io.kafka.KafkaClientFactory;
@@ -26,14 +24,17 @@ import io.github.ktestify.io.kafka.impl.RawKafkaProducer;
 import io.github.ktestify.models.Topic;
 import io.github.ktestify.utils.DataTableUtils;
 import io.github.ktestify.utils.FileUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.kafka.clients.producer.Producer;
+
 import java.io.File;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.kafka.clients.producer.Producer;
+
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
 
 /**
  * Orchestrates Kafka producer operations for Cucumber step definitions.
@@ -131,6 +132,47 @@ public class ProducerValidationService implements AutoCloseable {
                     e.getMessage());
             throw new RuntimeException(
                     "Failed to send raw record to topic '" + topic.getNamespacedTopic() + "': " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Sends a Kafka tombstone record ({@code null} value) with the given key and optional headers to a Kafka INPUT
+     * topic. Works for both raw and Avro topics because a tombstone carries {@code null} value bytes on the wire.
+     *
+     * @param row DataTable row from the step (requires {@code recordKey}, optional {@code headerFile})
+     * @param topic the resolved INPUT topic
+     * @param assets optional assets directory for resolving relative header file paths
+     * @since 1.2.10
+     */
+    public void sendTombstone(Map<String, String> row, Topic topic, KtestifyAssetsDirectory assets) {
+        String recordKey = getString(row, DATA_TABLE_RECORD_KEY);
+        String headerFilePath = resolve(assets, getString(row, DATA_TABLE_HEADER_FILE));
+        Map<String, String> headers = loadHeaders(headerFilePath);
+
+        ProducerContext<String, String> ctx = ProducerContext.<String, String>builder()
+                .topic(topic)
+                .producer(rawProducer())
+                .recordKey(recordKey)
+                .headers(headers)
+                .tombstone(true)
+                .build();
+
+        try {
+            new RawKafkaProducer(ctx).send();
+            log.info(
+                    "Tombstone record sent to topic '{}' (key='{}', headers={}).",
+                    topic.getNamespacedTopic(),
+                    recordKey,
+                    headers.keySet());
+        } catch (Exception e) {
+            log.error(
+                    "Failed to send tombstone record to topic '{}' with key '{}': {}",
+                    topic.getNamespacedTopic(),
+                    recordKey,
+                    e.getMessage());
+            throw new RuntimeException(
+                    "Failed to send tombstone record to topic '" + topic.getNamespacedTopic() + "': " + e.getMessage(),
+                    e);
         }
     }
 

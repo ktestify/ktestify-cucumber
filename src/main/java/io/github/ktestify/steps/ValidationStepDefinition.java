@@ -15,9 +15,6 @@
  */
 package io.github.ktestify.steps;
 
-import static io.github.ktestify.utils.DataTableUtils.Constants.DATA_TABLE_TOPIC_ALIAS;
-import static io.github.ktestify.utils.DataTableUtils.Constants.DATA_TABLE_TOPIC_NAME;
-
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Then;
@@ -25,9 +22,13 @@ import io.github.ktestify.models.Topic;
 import io.github.ktestify.services.ConsumerValidationService;
 import io.github.ktestify.utils.DataTableUtils;
 import io.github.ktestify.utils.TopicUtils;
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.List;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
+
+import static io.github.ktestify.utils.DataTableUtils.Constants.DATA_TABLE_TOPIC_ALIAS;
+import static io.github.ktestify.utils.DataTableUtils.Constants.DATA_TABLE_TOPIC_NAME;
 
 /**
  * Cucumber {@code @Then} and {@code @And} step definitions for consumer validation.
@@ -302,6 +303,24 @@ public class ValidationStepDefinition {
                         topic.getNamespacedTopic());
             }
             consumerService.validateRecordExists(rows.get(i), topic, referenceTimestamp);
+        }
+    }
+
+    // =========================================================================
+    // Tombstone assertion (null value, raw and Avro topics)
+    // =========================================================================
+
+    @Then("expected tombstone record")
+    public void thenExpectedTombstoneRecord(DataTable dataTable) {
+        List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
+        Topic topic = resolveAndAssertSingleTopic(rows);
+        log.info("Validating {} expected tombstone record(s) on topic '{}'.", rows.size(), topic.getNamespacedTopic());
+        long referenceTimestamp = now();
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
+            }
+            consumerService.validateTombstone(rows.get(i), topic, referenceTimestamp);
         }
     }
 

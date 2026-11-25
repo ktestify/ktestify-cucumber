@@ -45,6 +45,32 @@ class FeatureLinterTest {
     }
 
     @Test
+    void tombstoneStepsAreRecognizedByLinter(@TempDir Path dir) throws IOException {
+        Files.createDirectories(dir.resolve("assets"));
+        Path feature = Files.writeString(dir.resolve("tombstone.feature"), """
+                Feature: Tombstone test
+
+                  Background:
+                    Given input topic
+                      | topicName | topicAlias |
+                      | orders-in | ordersIn   |
+                    And output topic
+                      | topicName  | topicAlias |
+                      | orders-out | ordersOut  |
+
+                  Scenario: Produce and assert tombstone
+                    When tombstone record is sent
+                      | topicAlias | recordKey |
+                      | ordersIn   | order-123 |
+                    Then expected tombstone record
+                      | topicAlias | expectedRecordKey |
+                      | ordersOut  | order-123         |
+                """, StandardCharsets.UTF_8);
+
+        assertTrue(lintRules(feature, LintOptions.defaults()).isEmpty());
+    }
+
+    @Test
     void tabIndentationIsReported() throws IOException {
         assertTrue(lintRules(LINT_DIR.resolve("structural.feature"), LintOptions.defaults())
                 .contains(LintRule.G001));
