@@ -15,16 +15,17 @@
  */
 package io.github.ktestify.steps;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import io.github.ktestify.exceptions.TopicMismatchException;
 import io.github.ktestify.models.Topic;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for {@link ActionStepDefinition}'s multi-row same-topic guard rail ({@code resolveAndAssertSingleTopic}).
@@ -80,6 +81,17 @@ class ActionStepDefinitionMultiRowGuardTest {
                 assertThrows(InvocationTargetException.class, () -> invokeResolveAndAssertSingleTopic(action, rows));
         assertInstanceOf(TopicMismatchException.class, wrapper.getCause());
         assertTrue(wrapper.getCause().getMessage().contains("single topic"));
+    }
+
+    @Test
+    @DisplayName("andWaitForSeconds rejects negative duration and allows zero without sleeping")
+    void andWaitForSecondsValidation() throws Exception {
+        ActionStepDefinition action = new ActionStepDefinition(new SharedStepsResources());
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> action.andWaitForSeconds(-1));
+        assertTrue(ex.getMessage().contains("-1"));
+
+        assertDoesNotThrow(() -> action.andWaitForSeconds(0));
     }
 
     // ── Reflection helper ───────────────────────────────────────────────────────

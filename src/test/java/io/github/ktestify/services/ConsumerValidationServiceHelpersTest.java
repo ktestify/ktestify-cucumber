@@ -15,23 +15,26 @@
  */
 package io.github.ktestify.services;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
+import io.github.ktestify.exceptions.ConfigException;
 import io.github.ktestify.exceptions.ConsumerException;
 import io.github.ktestify.exceptions.FetchTimeoutException;
 import io.github.ktestify.match.BatchMatchStrategy;
 import io.github.ktestify.match.KeyMatchStrategy;
 import io.github.ktestify.match.MatchContext;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for the private helper methods of {@link ConsumerValidationService}.
@@ -91,6 +94,57 @@ class ConsumerValidationServiceHelpersTest {
         @DisplayName("1 second → 1000 ms")
         void oneSecond() throws Exception {
             assertEquals(1_000L, invokeGetSecondsToMillis(Map.of("t", "1"), "t"));
+        }
+
+        @Test
+        @DisplayName("0 seconds → 0 ms")
+        void zeroSeconds() throws Exception {
+            assertEquals(0L, invokeGetSecondsToMillis(Map.of("consumerDeltaTime", "0"), "consumerDeltaTime"));
+        }
+
+        @Test
+        @DisplayName("maximum accepted seconds converts without overflow")
+        void maxAcceptedSeconds() throws Exception {
+            long maxSeconds = ConsumerValidationService.MAX_DURATION_SECONDS;
+            assertEquals(
+                    maxSeconds * 1000L,
+                    invokeGetSecondsToMillis(
+                            Map.of("consumerReadTimeout", String.valueOf(maxSeconds)), "consumerReadTimeout"));
+        }
+
+        @Test
+        @DisplayName("rejects negative duration with ConfigException containing column and value")
+        void rejectsNegativeDuration() {
+            InvocationTargetException ex = assertThrows(
+                    InvocationTargetException.class,
+                    () -> invokeGetSecondsToMillis(Map.of("consumerDeltaTime", "-1"), "consumerDeltaTime"));
+            assertInstanceOf(ConfigException.class, ex.getCause());
+            assertTrue(ex.getCause().getMessage().contains("consumerDeltaTime"));
+            assertTrue(ex.getCause().getMessage().contains("-1"));
+        }
+
+        @Test
+        @DisplayName("rejects overflowing duration with ConfigException containing column and value")
+        void rejectsOverflowingDuration() {
+            String overflowing = String.valueOf(ConsumerValidationService.MAX_DURATION_SECONDS + 1L);
+            InvocationTargetException ex = assertThrows(
+                    InvocationTargetException.class,
+                    () -> invokeGetSecondsToMillis(Map.of("consumerReadTimeout", overflowing), "consumerReadTimeout"));
+            assertInstanceOf(ConfigException.class, ex.getCause());
+            assertTrue(ex.getCause().getMessage().contains("consumerReadTimeout"));
+            assertTrue(ex.getCause().getMessage().contains(overflowing));
+        }
+
+        @Test
+        @DisplayName("rejects non-numeric duration with ConfigException preserving NumberFormatException")
+        void rejectsNonNumericDuration() {
+            InvocationTargetException ex = assertThrows(
+                    InvocationTargetException.class,
+                    () -> invokeGetSecondsToMillis(Map.of("consumerReadTimeout", "abc"), "consumerReadTimeout"));
+            assertInstanceOf(ConfigException.class, ex.getCause());
+            assertInstanceOf(NumberFormatException.class, ex.getCause().getCause());
+            assertTrue(ex.getCause().getMessage().contains("consumerReadTimeout"));
+            assertTrue(ex.getCause().getMessage().contains("abc"));
         }
     }
 
