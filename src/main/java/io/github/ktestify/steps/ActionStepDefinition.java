@@ -15,8 +15,6 @@
  */
 package io.github.ktestify.steps;
 
-import static io.github.ktestify.utils.DataTableUtils.Constants.*;
-
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.After;
 import io.cucumber.java.en.And;
@@ -27,10 +25,13 @@ import io.github.ktestify.script.ScriptService;
 import io.github.ktestify.services.ProducerValidationService;
 import io.github.ktestify.utils.DataTableUtils;
 import io.github.ktestify.utils.TopicUtils;
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
+
+import static io.github.ktestify.utils.DataTableUtils.Constants.*;
 
 /**
  * Cucumber {@code @When} (and {@code @And}) step definitions for actions: producing records, sending files, executing
@@ -102,6 +103,27 @@ public class ActionStepDefinition {
                         topic.getNamespacedTopic());
             }
             producerService.sendAvroFromFile(rows.get(i), topic, resources.assetsDirectory);
+        }
+    }
+
+    // =========================================================================
+    // Kafka tombstone producer
+    // =========================================================================
+
+    @When("tombstone record is sent")
+    public void whenTombstoneRecordIsSent(DataTable dataTable) {
+        List<Map<String, String>> rows = DataTableUtils.toListOfMaps(dataTable);
+        Topic topic = resolveAndAssertSingleTopic(rows);
+        log.info("Sending {} tombstone record(s) to topic '{}'.", rows.size(), topic.getNamespacedTopic());
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.size() > 1) {
+                log.info(
+                        "Sending tombstone record row {}/{} to topic '{}'...",
+                        i + 1,
+                        rows.size(),
+                        topic.getNamespacedTopic());
+            }
+            producerService.sendTombstone(rows.get(i), topic, resources.assetsDirectory);
         }
     }
 

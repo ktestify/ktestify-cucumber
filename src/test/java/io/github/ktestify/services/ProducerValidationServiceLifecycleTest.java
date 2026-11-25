@@ -15,17 +15,7 @@
  */
 package io.github.ktestify.services;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import io.github.ktestify.models.Topic;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.common.serialization.Serializer;
@@ -34,6 +24,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /** Verifies that {@link ProducerValidationService} reuses and closes its Kafka producers. No broker is required. */
 @DisplayName("ProducerValidationService: producer lifecycle")
@@ -144,5 +145,34 @@ class ProducerValidationServiceLifecycleTest {
         failing.sendRawFromFile(row("k1"), topic, null);
 
         assertDoesNotThrow(failing::close);
+    }
+
+    @Test
+    @DisplayName("sendTombstone sends a null-value record with key and optional headers reusing the raw producer")
+    void sendTombstoneSendsNullValueWithHeaders() throws IOException {
+        Path headersFile =
+                Files.writeString(tmp.resolve("headers.json"), "{\"reason\":\"deleted\"}", StandardCharsets.UTF_8);
+
+        service.sendTombstone(Map.of("recordKey", "order-1", "headerFile", headersFile.toString()), topic, null);
+        service.sendTombstone(Map.of("recordKey", "order-2"), topic, null);
+
+        assertEquals(1, rawCreated.size());
+        assertEquals(0, avroFactoryCalls.get(), "Tombstone must reuse raw producer, not Avro producer");
+        var history = rawCreated.getFirst().history();
+        assertEquals(2, history.size());
+        assertEquals("order-1", history.get(0).key());
+        assertNull(history.get(0).value());
+        assertEquals(
+                "deleted",
+                new String(history.get(0).headers().lastHeader("reason").value(), StandardCharsets.UTF_8));
+        assertEquals("order-2", history.get(1).key());
+        assertNull(history.get(1).value());
+    }
+
+    @Test
+    @DisplayName("sendTombstone rejects missing or blank recordKey")
+    void sendTombstoneRejectsMissingKey() {
+        assertThrows(RuntimeException.class, () -> service.sendTombstone(Map.of(), topic, null));
+        assertThrows(RuntimeException.class, () -> service.sendTombstone(Map.of("recordKey", "  "), topic, null));
     }
 }
