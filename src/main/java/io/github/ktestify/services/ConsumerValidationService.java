@@ -16,6 +16,7 @@
 package io.github.ktestify.services;
 
 import io.github.ktestify.entities.KtestifyAssetsDirectory;
+import io.github.ktestify.exceptions.ConfigException;
 import io.github.ktestify.exceptions.ConsumerException;
 import io.github.ktestify.exceptions.FetchTimeoutException;
 import io.github.ktestify.io.kafka.ConsumerContext;
@@ -30,6 +31,8 @@ import org.apache.avro.generic.GenericRecord;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.github.ktestify.match.RecordMatcherFactory.*;
 import static io.github.ktestify.utils.DataTableUtils.Constants.*;
@@ -52,12 +55,93 @@ import static io.github.ktestify.utils.DataTableUtils.Constants.*;
  * to {@link KafkaClientFactory}.
  */
 @Slf4j
-public class ConsumerValidationService {
+public class ConsumerValidationService implements AutoCloseable {
 
     /** Extra buffer added on top of the read timeout for the outer executor guard (ms). */
     private static final long BUFFER_TIME_MS = 5000;
 
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    /** Default bounded wait for graceful executor shutdown (ms). */
+    private static final long DEFAULT_SHUTDOWN_TIMEOUT_MS = 5000;
+
+    /**
+     * Upper bound on DataTable duration values in seconds so both {@code seconds * 1000L} and {@code timeoutMs +
+     * BUFFER_TIME_MS} remain representable as positive {@code long} milliseconds.
+     */
+    static final long MAX_DURATION_SECONDS = (Long.MAX_VALUE - BUFFER_TIME_MS) / 1000L;
+
+    private static final AtomicInteger WORKER_COUNTER = new AtomicInteger(1);
+
+    private final ExecutorService executor;
+    private final long shutdownTimeoutMs;
+    private final long bufferTimeMs;
+    private final AtomicBoolean closed = new AtomicBoolean(false);
+    private volatile boolean forcedShutdownTimedOut = false;
+
+    /** Creates a service backed by a named daemon cached thread pool. */
+    public ConsumerValidationService() {
+        this(createDefaultExecutor(), DEFAULT_SHUTDOWN_TIMEOUT_MS, BUFFER_TIME_MS);
+    }
+
+    /** Package-private constructor for unit testing lifecycle, timeout, and shutdown behavior. */
+    ConsumerValidationService(ExecutorService executor, long shutdownTimeoutMs, long bufferTimeMs) {
+        this.executor = Objects.requireNonNull(executor, "executor must not be null");
+        this.shutdownTimeoutMs = Math.max(1L, shutdownTimeoutMs);
+        this.bufferTimeMs = Math.max(0L, bufferTimeMs);
+    }
+
+    private static ExecutorService createDefaultExecutor() {
+        return Executors.newCachedThreadPool(runnable -> {
+            Thread thread = new Thread(runnable, "ktestify-consumer-worker-" + WORKER_COUNTER.getAndIncrement());
+            thread.setDaemon(true);
+            return thread;
+        });
+    }
+
+    /**
+     * Shuts down the consumer worker pool cleanly with a bounded wait, escalating to {@code shutdownNow()} if tasks do
+     * not complete in time. Safe to call multiple times.
+     *
+     * @since 1.2.10
+     */
+    @Override
+    public void close() {
+        if (!closed.compareAndSet(false, true)) {
+            return;
+        }
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(shutdownTimeoutMs, TimeUnit.MILLISECONDS)) {
+                List<Runnable> pending = executor.shutdownNow();
+                log.warn(
+                        "ConsumerValidationService executor did not terminate within {}ms; forced shutdown invoked ({} queued task(s) cancelled).",
+                        shutdownTimeoutMs,
+                        pending.size());
+                long forceWaitMs = Math.min(shutdownTimeoutMs, 2000L);
+                if (!executor.awaitTermination(forceWaitMs, TimeUnit.MILLISECONDS)) {
+                    forcedShutdownTimedOut = true;
+                    log.error(
+                            "ConsumerValidationService executor still has active worker thread(s) after forced shutdown ({}ms). A consumer task may be ignoring interruption.",
+                            forceWaitMs);
+                }
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while shutting down ConsumerValidationService executor.");
+        }
+    }
+
+    boolean isClosed() {
+        return closed.get();
+    }
+
+    boolean isTerminated() {
+        return executor.isTerminated();
+    }
+
+    boolean isForcedShutdownTimedOut() {
+        return forcedShutdownTimedOut;
+    }
 
     // =========================================================================
     // Raw (String) consumers
@@ -809,9 +893,26 @@ public class ConsumerValidationService {
         execute(ctx, consumer, readTimeoutSeconds);
     }
 
-    private boolean runWithTimeout(java.util.concurrent.Callable<Boolean> consumer, Long readTimeoutMs) {
-        long timeoutMs = (readTimeoutMs != null ? readTimeoutMs : 10_000L) + BUFFER_TIME_MS;
-        Future<Boolean> future = executor.submit(consumer);
+    boolean runWithTimeout(java.util.concurrent.Callable<Boolean> consumer, Long readTimeoutMs) {
+        if (closed.get()) {
+            throw new ConsumerException("ConsumerValidationService has been closed and cannot accept new tasks.");
+        }
+        long baseTimeoutMs = readTimeoutMs != null ? readTimeoutMs : 10_000L;
+        long timeoutMs = Math.addExact(baseTimeoutMs, bufferTimeMs);
+        Future<Boolean> future = executor.submit(() -> {
+            try {
+                return consumer.call();
+            } finally {
+                if (consumer instanceof AutoCloseable closeable) {
+                    try {
+                        closeable.close();
+                    } catch (Exception closeEx) {
+                        log.warn(
+                                "Failed to close consumer resource after execution: {}", closeEx.getMessage(), closeEx);
+                    }
+                }
+            }
+        });
         try {
             return Boolean.TRUE.equals(future.get(timeoutMs, TimeUnit.MILLISECONDS));
         } catch (TimeoutException e) {
@@ -829,9 +930,10 @@ public class ConsumerValidationService {
             log.error("Consumer execution failed: {}", cause.getMessage(), cause);
             throw new ConsumerException("Consumer execution failed: " + cause.getMessage(), cause);
         } catch (InterruptedException e) {
+            future.cancel(true);
             Thread.currentThread().interrupt();
             log.warn("Consumer execution thread interrupted.");
-            throw new ConsumerException("Consumer thread interrupted.");
+            throw new ConsumerException("Consumer thread interrupted.", e);
         }
     }
 
@@ -867,7 +969,26 @@ public class ConsumerValidationService {
 
     private static Long getSeconds(Map<String, String> row, String col) {
         String v = getString(row, col);
-        return v != null ? Long.parseLong(v.trim()) : null;
+        if (v == null) {
+            return null;
+        }
+        try {
+            long seconds = Long.parseLong(v.trim());
+            if (seconds < 0L) {
+                throw new ConfigException(
+                        "Invalid duration in column '" + col + "' (value='" + v + "'): value must not be negative.");
+            }
+            if (seconds > MAX_DURATION_SECONDS) {
+                throw new ConfigException("Invalid duration in column '" + col + "' (value='" + v
+                        + "'): exceeds maximum supported value of " + MAX_DURATION_SECONDS + " seconds.");
+            }
+            return seconds;
+        } catch (NumberFormatException e) {
+            throw new ConfigException(
+                    "Invalid duration in column '" + col + "' (value='" + v
+                            + "'): expected a non-negative integer number of seconds.",
+                    e);
+        }
     }
 
     private static Integer getInt(Map<String, String> row, String col) {
@@ -875,10 +996,20 @@ public class ConsumerValidationService {
         return v != null ? Integer.parseInt(v.trim()) : null;
     }
 
-    /** Reads seconds from the DataTable and converts to milliseconds. */
+    /** Reads non-negative seconds from the DataTable and converts to milliseconds using checked multiplication. */
     private static Long getSecondsToMillis(Map<String, String> row, String col) {
         Long seconds = getSeconds(row, col);
-        return seconds != null ? seconds * 1000L : null;
+        if (seconds == null) {
+            return null;
+        }
+        try {
+            return Math.multiplyExact(seconds, 1000L);
+        } catch (ArithmeticException e) {
+            throw new ConfigException(
+                    "Invalid duration in column '" + col + "' (value='" + row.get(col)
+                            + "'): seconds-to-milliseconds conversion overflowed.",
+                    e);
+        }
     }
 
     /**

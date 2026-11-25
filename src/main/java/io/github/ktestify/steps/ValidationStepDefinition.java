@@ -16,6 +16,7 @@
 package io.github.ktestify.steps;
 
 import io.cucumber.datatable.DataTable;
+import io.cucumber.java.After;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Then;
 import io.github.ktestify.models.Topic;
@@ -59,6 +60,19 @@ public class ValidationStepDefinition {
     }
 
     // =========================================================================
+    // Lifecycle
+    // =========================================================================
+
+    /**
+     * Shuts down the consumer validation executor at the end of each scenario so timed-out or finished consumer workers
+     * do not leak across scenarios.
+     */
+    @After
+    public void closeConsumers() {
+        consumerService.close();
+    }
+
+    // =========================================================================
     // Raw — single record, file match
     // =========================================================================
 
@@ -72,10 +86,18 @@ public class ValidationStepDefinition {
                 topic.getNamespacedTopic());
         long referenceTimestamp = now();
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
             }
-            consumerService.validateRawFromFile(rows.get(i), topic, resources.assetsDirectory, referenceTimestamp);
+            StepRowExecution.runRow(
+                    "Then expected record from file",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> consumerService.validateRawFromFile(
+                            row, topic, resources.assetsDirectory, referenceTimestamp));
         }
     }
 
@@ -93,10 +115,17 @@ public class ValidationStepDefinition {
                 topic.getNamespacedTopic());
         long referenceTimestamp = now();
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
             }
-            consumerService.validateRawFields(rows.get(i), topic, resources.assetsDirectory, referenceTimestamp);
+            StepRowExecution.runRow(
+                    "Then expected record should have fields matching from file",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> consumerService.validateRawFields(row, topic, resources.assetsDirectory, referenceTimestamp));
         }
     }
 
@@ -111,10 +140,17 @@ public class ValidationStepDefinition {
         log.info("Validating {} expected XML record(s) on topic '{}'.", rows.size(), topic.getNamespacedTopic());
         long referenceTimestamp = now();
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
             }
-            consumerService.validateRawXml(rows.get(i), topic, resources.assetsDirectory, referenceTimestamp);
+            StepRowExecution.runRow(
+                    "Then expected record from file based on XML",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> consumerService.validateRawXml(row, topic, resources.assetsDirectory, referenceTimestamp));
         }
     }
 
@@ -132,10 +168,17 @@ public class ValidationStepDefinition {
                 topic.getNamespacedTopic());
         long referenceTimestamp = now();
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
             }
-            consumerService.validateRawXPath(rows.get(i), topic, resources.assetsDirectory, referenceTimestamp);
+            StepRowExecution.runRow(
+                    "Then expected record based on XML should have fields matching from file",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> consumerService.validateRawXPath(row, topic, resources.assetsDirectory, referenceTimestamp));
         }
     }
 
@@ -148,7 +191,13 @@ public class ValidationStepDefinition {
         Map<String, String> row = singleRow(dataTable, null);
         Topic topic = resolveTopic(row);
         log.info("Validating batch of raw records from files on topic '{}'.", topic.getNamespacedTopic());
-        consumerService.validateRawBatch(row, topic, resources.assetsDirectory);
+        StepRowExecution.runRow(
+                "Then expected records from files",
+                0,
+                1,
+                topic,
+                row,
+                () -> consumerService.validateRawBatch(row, topic, resources.assetsDirectory));
     }
 
     // =========================================================================
@@ -165,10 +214,18 @@ public class ValidationStepDefinition {
                 topic.getNamespacedTopic());
         long referenceTimestamp = now();
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
             }
-            consumerService.validateAvroFromFile(rows.get(i), topic, resources.assetsDirectory, referenceTimestamp);
+            StepRowExecution.runRow(
+                    "Then expected record from file based on schema",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> consumerService.validateAvroFromFile(
+                            row, topic, resources.assetsDirectory, referenceTimestamp));
         }
     }
 
@@ -186,10 +243,17 @@ public class ValidationStepDefinition {
                 topic.getNamespacedTopic());
         long referenceTimestamp = now();
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
             }
-            consumerService.validateAvroFieldValue(rows.get(i), topic, referenceTimestamp);
+            StepRowExecution.runRow(
+                    "Then expected record based on schema should have fields matching from given value",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> consumerService.validateAvroFieldValue(row, topic, referenceTimestamp));
         }
     }
 
@@ -202,7 +266,13 @@ public class ValidationStepDefinition {
         Map<String, String> row = singleRow(dataTable, null);
         Topic topic = resolveTopic(row);
         log.info("Validating batch of Avro records from files on topic '{}'.", topic.getNamespacedTopic());
-        consumerService.validateAvroBatch(row, topic, resources.assetsDirectory);
+        StepRowExecution.runRow(
+                "Then expected records from files based on schema",
+                0,
+                1,
+                topic,
+                row,
+                () -> consumerService.validateAvroBatch(row, topic, resources.assetsDirectory));
     }
 
     // =========================================================================
@@ -216,10 +286,17 @@ public class ValidationStepDefinition {
         log.info("Validating {} expected raw record key(s) on topic '{}'.", rows.size(), topic.getNamespacedTopic());
         long referenceTimestamp = now();
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
             }
-            consumerService.validateRawKeyOnly(rows.get(i), topic, referenceTimestamp);
+            StepRowExecution.runRow(
+                    "Then expected record key matches",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> consumerService.validateRawKeyOnly(row, topic, referenceTimestamp));
         }
     }
 
@@ -237,10 +314,18 @@ public class ValidationStepDefinition {
                 topic.getNamespacedTopic());
         long referenceTimestamp = now();
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
             }
-            consumerService.validateRawKeyValue(rows.get(i), topic, resources.assetsDirectory, referenceTimestamp);
+            StepRowExecution.runRow(
+                    "Then expected record key and value match from file",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> consumerService.validateRawKeyValue(
+                            row, topic, resources.assetsDirectory, referenceTimestamp));
         }
     }
 
@@ -255,10 +340,17 @@ public class ValidationStepDefinition {
         log.info("Validating {} expected Avro record key(s) on topic '{}'.", rows.size(), topic.getNamespacedTopic());
         long referenceTimestamp = now();
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
             }
-            consumerService.validateAvroKeyOnly(rows.get(i), topic, referenceTimestamp);
+            StepRowExecution.runRow(
+                    "Then expected Avro record key matches",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> consumerService.validateAvroKeyOnly(row, topic, referenceTimestamp));
         }
     }
 
@@ -273,6 +365,7 @@ public class ValidationStepDefinition {
         log.info("Checking that {} record(s) do NOT appear on topic '{}'.", rows.size(), topic.getNamespacedTopic());
         long referenceTimestamp = now();
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info(
                         "Checking negative watcher row {}/{} on topic '{}'...",
@@ -280,7 +373,13 @@ public class ValidationStepDefinition {
                         rows.size(),
                         topic.getNamespacedTopic());
             }
-            consumerService.validateNoRecord(rows.get(i), topic, referenceTimestamp);
+            StepRowExecution.runRow(
+                    "And record should not appear in topic",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> consumerService.validateNoRecord(row, topic, referenceTimestamp));
         }
     }
 
@@ -295,6 +394,7 @@ public class ValidationStepDefinition {
         log.info("Checking that {} record(s) appear on topic '{}'.", rows.size(), topic.getNamespacedTopic());
         long referenceTimestamp = now();
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info(
                         "Checking positive watcher row {}/{} on topic '{}'...",
@@ -302,7 +402,13 @@ public class ValidationStepDefinition {
                         rows.size(),
                         topic.getNamespacedTopic());
             }
-            consumerService.validateRecordExists(rows.get(i), topic, referenceTimestamp);
+            StepRowExecution.runRow(
+                    "And record should appear in topic",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> consumerService.validateRecordExists(row, topic, referenceTimestamp));
         }
     }
 
@@ -317,10 +423,17 @@ public class ValidationStepDefinition {
         log.info("Validating {} expected tombstone record(s) on topic '{}'.", rows.size(), topic.getNamespacedTopic());
         long referenceTimestamp = now();
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info("Validating row {}/{} on topic '{}'...", i + 1, rows.size(), topic.getNamespacedTopic());
             }
-            consumerService.validateTombstone(rows.get(i), topic, referenceTimestamp);
+            StepRowExecution.runRow(
+                    "Then expected tombstone record",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> consumerService.validateTombstone(row, topic, referenceTimestamp));
         }
     }
 

@@ -74,6 +74,7 @@ public class ActionStepDefinition {
         Topic topic = resolveAndAssertSingleTopic(rows);
         log.info("Sending {} raw record(s) to topic '{}'.", rows.size(), topic.getNamespacedTopic());
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info(
                         "Sending raw record row {}/{} to topic '{}'...",
@@ -81,7 +82,13 @@ public class ActionStepDefinition {
                         rows.size(),
                         topic.getNamespacedTopic());
             }
-            producerService.sendRawFromFile(rows.get(i), topic, resources.assetsDirectory);
+            StepRowExecution.runRow(
+                    "When record from file is sent",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> producerService.sendRawFromFile(row, topic, resources.assetsDirectory));
         }
     }
 
@@ -95,6 +102,7 @@ public class ActionStepDefinition {
         Topic topic = resolveAndAssertSingleTopic(rows);
         log.info("Sending {} Avro record(s) to topic '{}'.", rows.size(), topic.getNamespacedTopic());
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info(
                         "Sending Avro record row {}/{} to topic '{}'...",
@@ -102,7 +110,13 @@ public class ActionStepDefinition {
                         rows.size(),
                         topic.getNamespacedTopic());
             }
-            producerService.sendAvroFromFile(rows.get(i), topic, resources.assetsDirectory);
+            StepRowExecution.runRow(
+                    "When record from file based on schema is sent",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> producerService.sendAvroFromFile(row, topic, resources.assetsDirectory));
         }
     }
 
@@ -116,6 +130,7 @@ public class ActionStepDefinition {
         Topic topic = resolveAndAssertSingleTopic(rows);
         log.info("Sending {} tombstone record(s) to topic '{}'.", rows.size(), topic.getNamespacedTopic());
         for (int i = 0; i < rows.size(); i++) {
+            Map<String, String> row = rows.get(i);
             if (rows.size() > 1) {
                 log.info(
                         "Sending tombstone record row {}/{} to topic '{}'...",
@@ -123,7 +138,13 @@ public class ActionStepDefinition {
                         rows.size(),
                         topic.getNamespacedTopic());
             }
-            producerService.sendTombstone(rows.get(i), topic, resources.assetsDirectory);
+            StepRowExecution.runRow(
+                    "When tombstone record is sent",
+                    i,
+                    rows.size(),
+                    topic,
+                    row,
+                    () -> producerService.sendTombstone(row, topic, resources.assetsDirectory));
         }
     }
 
@@ -133,8 +154,17 @@ public class ActionStepDefinition {
 
     @And("wait for {int} seconds")
     public void andWaitForSeconds(int seconds) throws InterruptedException {
+        if (seconds < 0) {
+            throw new IllegalArgumentException(
+                    "Step 'And wait for " + seconds + " seconds': wait duration must not be negative.");
+        }
+        if (seconds == 0) {
+            log.info("Wait duration is 0 seconds; skipping sleep.");
+            return;
+        }
+        long waitMillis = Math.multiplyExact((long) seconds, 1000L);
         log.info("Waiting {} second(s)…", seconds);
-        Thread.sleep(seconds * 1000L);
+        Thread.sleep(waitMillis);
     }
 
     // =========================================================================
